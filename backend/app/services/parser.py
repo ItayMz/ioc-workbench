@@ -6,6 +6,71 @@ from app.models.ioc import ParsedIOC
 from app.services.refang import refang
 
 
+LABELS = {
+    "url",
+    "domain",
+    "ip",
+    "ipaddress",
+    "address",
+    "ioc",
+    "indicators",
+    "indicator",
+}
+
+SEPARATORS = {",", ";", ":", "|", "(", ")", "[", "]", "{", "}"}
+
+
+def _extract_candidates(raw_text: str) -> list[str]:
+    cleaned = raw_text.strip()
+    if not cleaned:
+        return []
+
+    cleaned = re.sub(r"(?i)\b(?:url|domain|ip|address|ioc|indicators?|indicator)\b\s*[-:]+\s*", "", cleaned)
+    cleaned = re.sub(r"(?i)\b(?:url|domain|ip|address|ioc|indicators?|indicator)\b", "", cleaned)
+
+    candidate_tokens: list[str] = []
+    for token in re.split(r"[\s,;|]+", cleaned):
+        normalized_token = token.strip("()[]{}:;,'\"")
+        if not normalized_token:
+            continue
+
+        if normalized_token.lower() in LABELS:
+            continue
+
+        if any(char in normalized_token for char in SEPARATORS):
+            if normalized_token in SEPARATORS:
+                continue
+
+        candidate_tokens.append(normalized_token)
+
+    return candidate_tokens
+
+
+def _deduplicate_indicators(indicators: list[ParsedIOC]) -> list[ParsedIOC]:
+    seen: set[tuple[IndicatorType | None, str]] = set()
+    deduplicated: list[ParsedIOC] = []
+
+    for indicator in indicators:
+        key = (indicator.indicator_type, indicator.refanged_value.lower())
+        if key in seen:
+            continue
+
+        seen.add(key)
+        deduplicated.append(indicator)
+
+    return deduplicated
+
+
+def parse_iocs(values: list[str]) -> list[ParsedIOC]:
+    indicators = [parse_ioc(value) for value in values]
+    return _deduplicate_indicators(indicators)
+
+
+def parse_bulk_text(raw_text: str) -> list[ParsedIOC]:
+    values = _extract_candidates(raw_text)
+    return parse_iocs(values)
+
+
 def parse_ioc(value: str) -> ParsedIOC:
     cleaned_value = value.strip()
     refanged_value = refang(cleaned_value)
