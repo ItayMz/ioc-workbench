@@ -1,6 +1,8 @@
 import re
 from ipaddress import ip_address
 
+from app.enums.action import Action
+from app.enums.category import Category
 from app.enums.indicator_type import IndicatorType
 from app.models.ioc import ParsedIOC
 from app.services.refang import refang
@@ -106,10 +108,25 @@ def parse_ioc(value: str) -> ParsedIOC:
     valid = indicator_type is not None
     reason = None if valid else "unsupported_indicator"
 
+    action = None
+    category = None
+    generate_alert = None
+    if valid:
+        if indicator_type in {IndicatorType.FILE_MD5, IndicatorType.FILE_SHA1, IndicatorType.FILE_SHA256}:
+            action = Action.BLOCK_AND_REMEDIATE
+        else:
+            action = Action.BLOCK
+
+        category = Category.MALWARE
+        generate_alert = True
+
     return ParsedIOC(
         original_value=value,
         refanged_value=refanged_value,
         indicator_type=indicator_type,
+        action=action,
+        category=category,
+        generate_alert=generate_alert,
         valid=valid,
         reason=reason,
     )

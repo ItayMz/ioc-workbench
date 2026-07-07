@@ -61,3 +61,33 @@ def test_parse_bulk_text_extracts_iocs_from_free_text():
         IndicatorType.IP_ADDRESS,
         IndicatorType.URL,
     ]
+
+
+def test_parse_endpoint_returns_correct_actions_for_hashes_and_urls():
+    response = parse_bulk_iocs(
+        ParseRequest(
+            raw_text=" ".join(["a" * 32, "b" * 40, "c" * 64, "https://example.com"])
+        )
+    )
+
+    indicators = response.indicators
+    payload = response.model_dump(mode="json")
+
+    assert [indicator.indicator_type.value for indicator in indicators] == [
+        "FileMd5",
+        "FileSha1",
+        "FileSha256",
+        "Url",
+    ]
+    assert [indicator.action.value for indicator in indicators] == [
+        "BlockAndRemediate",
+        "BlockAndRemediate",
+        "BlockAndRemediate",
+        "Block",
+    ]
+    assert [item["action"] for item in payload["indicators"]] == [
+        "BlockAndRemediate",
+        "BlockAndRemediate",
+        "BlockAndRemediate",
+        "Block",
+    ]
