@@ -111,6 +111,8 @@ def parse_ioc(value: str) -> ParsedIOC:
     action = None
     category = None
     generate_alert = None
+    severity = None
+    expiration_time = None
     if valid:
         if indicator_type in {IndicatorType.FILE_MD5, IndicatorType.FILE_SHA1, IndicatorType.FILE_SHA256}:
             action = Action.BLOCK_AND_REMEDIATE
@@ -119,6 +121,8 @@ def parse_ioc(value: str) -> ParsedIOC:
 
         category = Category.MALWARE
         generate_alert = True
+        severity = "High"
+        expiration_time = "2099-12-31T23:59:59.0Z"
 
     return ParsedIOC(
         original_value=value,
@@ -127,6 +131,8 @@ def parse_ioc(value: str) -> ParsedIOC:
         action=action,
         category=category,
         generate_alert=generate_alert,
+        severity=severity,
+        expiration_time=expiration_time,
         valid=valid,
         reason=reason,
     )

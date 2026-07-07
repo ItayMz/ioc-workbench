@@ -75,3 +75,20 @@ def test_invalid_indicators_have_no_category_or_alerts():
 
     assert invalid_ioc.category is None
     assert invalid_ioc.generate_alert is None
+
+
+def test_valid_indicators_get_severity_and_expiration_defaults():
+    url_ioc = parse_ioc("https://example.com")
+    hash_ioc = parse_ioc("0123456789abcdef0123456789abcdef")
+
+    assert url_ioc.severity == "High"
+    assert url_ioc.expiration_time == "2099-12-31T23:59:59.0Z"
+    assert hash_ioc.severity == "High"
+    assert hash_ioc.expiration_time == "2099-12-31T23:59:59.0Z"
+
+
+def test_invalid_indicators_have_no_severity_or_expiration_defaults():
+    invalid_ioc = parse_ioc("not-an-ioc")
+
+    assert invalid_ioc.severity is None
+    assert invalid_ioc.expiration_time is None

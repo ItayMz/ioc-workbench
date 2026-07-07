@@ -14,5 +14,7 @@ class ParsedIOC(BaseModel):
     action: Action | None = None
     category: Category | None = None
     generate_alert: bool | None = None
+    severity: str | None = None
+    expiration_time: str | None = None
     valid: bool = False
     reason: str | None = None
