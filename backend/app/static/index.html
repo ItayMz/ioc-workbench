@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TSOC IOC Portal</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2rem; line-height: 1.4; color: #1f2937; }
+      textarea { width: 100%; min-height: 8rem; margin-bottom: 1rem; }
+      pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-family: Consolas, monospace; }
+      button { margin-bottom: 1rem; }
+      .query-card { border: 1px solid #d1d5db; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+      .query-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
+      .query-title { margin: 0; font-size: 1.05rem; }
+      .meta-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+      .meta-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: 0.8rem; font-weight: 600; }
+      .meta-chip .chip-label { opacity: 0.8; font-weight: 500; }
+      .meta-chip.tables { background: #ecfeff; color: #0f766e; }
+      .table-list { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; max-width: 100%; }
+      .table-pill { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 999px; background: rgba(15, 118, 110, 0.12); }
+      .lookback { margin-bottom: 1rem; }
+      .notification { margin-top: 0.5rem; color: green; font-size: 0.9rem; }
+
+      @media (max-width: 640px) {
+        body { margin: 1rem; }
+        .query-header { flex-direction: column; align-items: flex-start; }
+        .meta-chip { width: 100%; justify-content: space-between; }
+        .table-list { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TSOC IOC Portal</h1>
+    <textarea id="rawText" placeholder="Paste IOC text or upload later">https://example.com</textarea>
+    <div class="lookback">
+      <label for="lookbackSelect">Lookback:</label>
+      <select id="lookbackSelect">
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90" selected>Last 90 days</option>
+        <option value="180">Last 180 days</option>
+        <option value="365">Last 365 days</option>
+      </select>
+    </div>
+    <div class="lookback">
+      <button type="button" onclick="submitParse()">Parse</button>
+      <button type="button" onclick="exportCsv(parseText(document.getElementById('rawText').value, Number(document.getElementById('lookbackSelect').value)))">Export CSV</button>
+      <label for="fileInput">Upload CSV/TXT</label>
+      <input id="fileInput" type="file" accept=".csv,.txt" />
+    </div>
+    <div class="notification" style="margin-bottom: 1rem;">All processing happens locally in your browser. No IOC data is uploaded.</div>
+    <div id="result"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>

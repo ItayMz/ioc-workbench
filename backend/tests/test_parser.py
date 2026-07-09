@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.enums.action import Action
 from app.enums.category import Category
 from app.enums.indicator_type import IndicatorType
-from app.services.parser import parse_ioc
+from app.services.parser import parse_bulk_text, parse_ioc, prepare_text_from_upload
 
 
 def test_parse_ioc_returns_enum_indicator_for_url():
@@ -92,3 +92,58 @@ def test_invalid_indicators_have_no_severity_or_expiration_defaults():
 
     assert invalid_ioc.severity is None
     assert invalid_ioc.expiration_time is None
+
+
+def test_parse_bulk_text_handles_empty_and_whitespace_input():
+    assert parse_bulk_text("") == []
+    assert parse_bulk_text("   \n\t  ") == []
+
+
+def test_parse_bulk_text_trims_whitespace_and_ignores_blank_lines():
+    indicators = parse_bulk_text("\n  https://example.com   \n\n  8.8.8.8  \n")
+
+    assert [indicator.refanged_value for indicator in indicators] == ["https://example.com", "8.8.8.8"]
+    assert [indicator.indicator_type for indicator in indicators] == [IndicatorType.URL, IndicatorType.IP_ADDRESS]
+
+
+def test_parse_ioc_rejects_extremely_long_input_without_crashing():
+    parsed = parse_ioc("x" * 20000)
+
+    assert parsed.valid is False
+    assert parsed.reason == "line_too_long"
+
+
+def test_prepare_text_from_upload_rejects_empty_files():
+    try:
+        prepare_text_from_upload(b"", "test.csv")
+    except ValueError as exc:
+        assert "empty" in str(exc).lower()
+    else:
+        raise AssertionError("Expected ValueError for empty upload")
+
+
+def test_prepare_text_from_upload_rejects_unsupported_file_types():
+    try:
+        prepare_text_from_upload(b"https://example.com", "test.exe")
+    except ValueError as exc:
+        assert "unsupported" in str(exc).lower()
+    else:
+        raise AssertionError("Expected ValueError for unsupported file type")
+
+
+def test_prepare_text_from_upload_rejects_invalid_utf8():
+    try:
+        prepare_text_from_upload(b"\xff\xfe\x00", "test.csv")
+    except ValueError as exc:
+        assert "utf-8" in str(exc).lower()
+    else:
+        raise AssertionError("Expected ValueError for invalid UTF-8")
+
+
+def test_prepare_text_from_upload_rejects_malformed_csv():
+    try:
+        prepare_text_from_upload(b"https://example.com,8.8.8.8\nhttps://example.com", "test.csv")
+    except ValueError as exc:
+        assert "malformed csv" in str(exc).lower()
+    else:
+        raise AssertionError("Expected ValueError for malformed CSV")

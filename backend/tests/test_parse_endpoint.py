@@ -1,5 +1,8 @@
 from pathlib import Path
 import sys
+import time
+
+import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -93,26 +96,55 @@ def test_parse_endpoint_returns_correct_actions_for_hashes_and_urls():
     ]
 
 
+def test_parse_endpoint_includes_kql_queries_with_existing_ioc_output():
+    response = parse_bulk_iocs(ParseRequest(raw_text="https://example.com"))
+
+    assert response.total_count == 1
+    assert response.valid_count == 1
+    assert response.indicators[0].indicator_type is IndicatorType.URL
+    assert response.kqlQueries["urls"] is not None
+    assert response.kqlQueries["md5"] is None
+    assert response.kqlQueries["urls"]["query"].startswith("let IOC_URLS")
+
+
 def test_parse_endpoint_uses_campaign_name_for_metadata():
     response = parse_bulk_iocs(
         ParseRequest(raw_text="https://example.com", campaign_name="Lumma Stealer")
     )
 
-    assert response.title == "Block Lumma Stealer Indicators"
-    assert response.description == "Indicators associated with the Lumma Stealer campaign."
-    assert response.recommended_actions == (
-        "Block the listed indicators and investigate any historical communication."
+    assert response.title == "Lumma Stealer IOC"
+    assert response.description == "Indicators associated with Lumma Stealer."
+    assert response.recommended_actions == ""
+
+
+def test_parse_endpoint_accepts_camel_case_campaign_name_field():
+    response = parse_bulk_iocs(
+        ParseRequest(raw_text="https://example.com", campaignName="DarkGate")
     )
+
+    assert response.title == "DarkGate IOC"
+    assert response.description == "Indicators associated with DarkGate."
+
+
+def test_parse_endpoint_prefers_campaign_name_over_legacy_campaign_name():
+    response = parse_bulk_iocs(
+        ParseRequest(
+            raw_text="https://example.com",
+            campaign_name="Legacy Campaign",
+            campaignName="Manual Campaign",
+        )
+    )
+
+    assert response.title == "Manual Campaign IOC"
+    assert response.description == "Indicators associated with Manual Campaign."
 
 
 def test_parse_endpoint_uses_generic_metadata_when_campaign_name_missing():
     response = parse_bulk_iocs(ParseRequest(raw_text="https://example.com"))
 
-    assert response.title == "Block Malicious Indicators"
-    assert response.description == "Indicators associated with a reported malicious campaign."
-    assert response.recommended_actions == (
-        "Block the listed indicators and investigate any historical communication."
-    )
+    assert response.title == "IOC Sweep"
+    assert response.description == "Indicators submitted for IOC sweep."
+    assert response.recommended_actions == ""
 
 
 def test_parse_endpoint_accepts_source_email_text_without_using_it():
@@ -120,8 +152,73 @@ def test_parse_endpoint_accepts_source_email_text_without_using_it():
         ParseRequest(raw_text="https://example.com", source_email_text="hello from an email")
     )
 
-    assert response.title == "Block Malicious Indicators"
-    assert response.description == "Indicators associated with a reported malicious campaign."
-    assert response.recommended_actions == (
-        "Block the listed indicators and investigate any historical communication."
+    assert response.title == "IOC Sweep"
+    assert response.description == "Indicators submitted for IOC sweep."
+    assert response.recommended_actions == ""
+
+
+def test_parse_endpoint_uses_most_common_ioc_metadata_campaign_when_missing_manual_name():
+    response = parse_bulk_iocs(
+        ParseRequest(
+            raw_text="https://example.com evil.com",
+            iocMetadata=[
+                {"value": "https://example.com", "campaignName": "Storm-123"},
+                {"value": "evil.com", "campaignName": "Storm-123"},
+                {"value": "8.8.8.8", "campaignName": "Other"},
+            ],
+        )
     )
+
+    assert response.title == "Storm-123 IOC"
+    assert response.description == "Indicators associated with Storm-123."
+
+
+def test_parse_endpoint_handles_empty_text_input_gracefully():
+    response = parse_bulk_iocs(ParseRequest(raw_text="   \n  "))
+
+    assert response.total_count == 0
+    assert response.valid_count == 0
+    assert response.invalid_count == 0
+    assert response.indicators == []
+    assert response.kqlQueries["urls"] is None
+
+
+def test_parse_endpoint_raises_clear_error_for_malformed_upload_payload():
+    with pytest.raises(ValueError):
+        parse_bulk_iocs(ParseRequest(raw_text=None))
+
+
+def test_parse_endpoint_includes_processing_summary_counts():
+    response = parse_bulk_iocs(
+        ParseRequest(raw_text="https://example.com https://example.com 8.8.8.8 8.8.8.8 evil[.]com evil.com a" * 32)
+    )
+
+    assert response.summary.processed > 0
+    assert response.summary.md5 == 0
+    assert response.summary.sha1 == 0
+    assert response.summary.sha256 == 0
+    assert response.summary.ipv4 == 1
+    assert response.summary.ipv6 == 0
+    assert response.summary.domains == 1
+    assert response.summary.urls == 1
+    assert response.summary.duplicatesRemoved >= 1
+    assert response.summary.queriesGenerated == 3
+
+
+def test_large_mixed_ioc_input_completes_quickly():
+    large_input = []
+    for index in range(10000):
+        large_input.append(f"https://example{index % 100}.com")
+        large_input.append(f"8.8.{index % 255}.1")
+        large_input.append(f"example{index % 100}.com")
+        large_input.append(f"{index:032x}")
+
+    start_time = time.perf_counter()
+    response = parse_bulk_iocs(ParseRequest(raw_text=" ".join(large_input)))
+    elapsed = time.perf_counter() - start_time
+
+    print(f"Large mixed IOC parse elapsed: {elapsed:.4f}s")
+
+    assert response.summary.processed == 10455
+    assert response.summary.queriesGenerated >= 1
+    assert elapsed < 5.0

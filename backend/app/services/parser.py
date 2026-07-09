@@ -1,3 +1,5 @@
+import csv
+import io
 import re
 from ipaddress import ip_address
 
@@ -20,30 +22,38 @@ LABELS = {
 }
 
 SEPARATORS = {",", ";", ":", "|", "(", ")", "[", "]", "{", "}"}
+MAX_LINE_LENGTH = 8192
 
 
 def _extract_candidates(raw_text: str) -> list[str]:
-    cleaned = raw_text.strip()
-    if not cleaned:
+    if raw_text is None:
         return []
 
-    cleaned = re.sub(r"(?i)\b(?:url|domain|ip|address|ioc|indicators?|indicator)\b\s*[-:]+\s*", "", cleaned)
-    cleaned = re.sub(r"(?i)\b(?:url|domain|ip|address|ioc|indicators?|indicator)\b", "", cleaned)
+    if not isinstance(raw_text, str):
+        raw_text = str(raw_text)
 
     candidate_tokens: list[str] = []
-    for token in re.split(r"[\s,;|]+", cleaned):
-        normalized_token = token.strip("()[]{}:;,'\"")
-        if not normalized_token:
+    for raw_line in raw_text.splitlines():
+        line = raw_line.strip()
+        if not line:
             continue
 
-        if normalized_token.lower() in LABELS:
-            continue
+        cleaned = re.sub(r"(?i)\b(?:url|domain|ip|address|ioc|indicators?|indicator)\b\s*[-:]+\s*", "", line)
+        cleaned = re.sub(r"(?i)\b(?:url|domain|ip|address|ioc|indicators?|indicator)\b", "", cleaned)
 
-        if any(char in normalized_token for char in SEPARATORS):
-            if normalized_token in SEPARATORS:
+        for token in re.split(r"[\s,;|]+", cleaned):
+            normalized_token = token.strip("()[]{}:;,'\"")
+            if not normalized_token:
                 continue
 
-        candidate_tokens.append(normalized_token)
+            if normalized_token.lower() in LABELS:
+                continue
+
+            if any(char in normalized_token for char in SEPARATORS):
+                if normalized_token in SEPARATORS:
+                    continue
+
+            candidate_tokens.append(normalized_token)
 
     return candidate_tokens
 
@@ -64,7 +74,7 @@ def _deduplicate_indicators(indicators: list[ParsedIOC]) -> list[ParsedIOC]:
 
 
 def parse_iocs(values: list[str]) -> list[ParsedIOC]:
-    indicators = [parse_ioc(value) for value in values]
+    indicators = [parse_ioc(value) for value in values if isinstance(value, str) and value.strip()]
     return _deduplicate_indicators(indicators)
 
 
@@ -73,8 +83,49 @@ def parse_bulk_text(raw_text: str) -> list[ParsedIOC]:
     return parse_iocs(values)
 
 
+def prepare_text_from_upload(file_bytes: bytes, filename: str) -> str:
+    if not file_bytes:
+        raise ValueError("The uploaded file is empty.")
+
+    if not filename or not filename.lower().endswith((".csv", ".txt")):
+        raise ValueError("Unsupported file type. Please upload a .csv or .txt file.")
+
+    try:
+        text = file_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("The uploaded file could not be decoded as UTF-8.") from exc
+
+    if not text.strip():
+        raise ValueError("The uploaded file is empty.")
+
+    rows: list[list[str]] = []
+    try:
+        for row in csv.reader(io.StringIO(text), skipinitialspace=True):
+            if not row:
+                continue
+            if len(row) != 1:
+                raise ValueError("Malformed CSV file. Please provide one IOC per line.")
+            rows.append([row[0].strip()])
+    except csv.Error as exc:
+        raise ValueError("Malformed CSV file. Please provide one IOC per line.") from exc
+
+    if not rows:
+        raise ValueError("The uploaded file is empty.")
+
+    normalized_lines = []
+    for row in rows:
+        value = row[0].strip()
+        if value:
+            normalized_lines.append(value)
+
+    return "\n".join(normalized_lines)
+
+
 def parse_ioc(value: str) -> ParsedIOC:
-    cleaned_value = value.strip()
+    if value is None:
+        value = ""
+
+    cleaned_value = str(value).strip()
     refanged_value = refang(cleaned_value)
 
     if not cleaned_value:
@@ -83,6 +134,14 @@ def parse_ioc(value: str) -> ParsedIOC:
             refanged_value=refanged_value,
             valid=False,
             reason="empty_value",
+        )
+
+    if len(cleaned_value) > MAX_LINE_LENGTH:
+        return ParsedIOC(
+            original_value=value,
+            refanged_value=refanged_value,
+            valid=False,
+            reason="line_too_long",
         )
 
     if re.fullmatch(r"[0-9a-fA-F]{32}", refanged_value):
