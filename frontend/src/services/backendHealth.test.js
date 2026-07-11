@@ -5,6 +5,7 @@ import {
   BACKEND_CONNECTION_STATES,
   isLikelyNetworkError,
   runRequestWithSingleHealthRecovery,
+  shouldShowBackendSpinner,
   shouldDisableBackendActions,
   waitForBackendAvailability,
 } from './backendHealth.js'
@@ -43,6 +44,13 @@ test('controls are disabled while backend is unavailable and enabled after conne
   assert.equal(shouldDisableBackendActions(BACKEND_CONNECTION_STATES.UNAVAILABLE, false), true)
   assert.equal(shouldDisableBackendActions(BACKEND_CONNECTION_STATES.CONNECTED, false), false)
   assert.equal(shouldDisableBackendActions(BACKEND_CONNECTION_STATES.CONNECTED, true), true)
+})
+
+test('spinner shows only during checking and waking states', () => {
+  assert.equal(shouldShowBackendSpinner(BACKEND_CONNECTION_STATES.CHECKING), true)
+  assert.equal(shouldShowBackendSpinner(BACKEND_CONNECTION_STATES.WAKING), true)
+  assert.equal(shouldShowBackendSpinner(BACKEND_CONNECTION_STATES.CONNECTED), false)
+  assert.equal(shouldShowBackendSpinner(BACKEND_CONNECTION_STATES.UNAVAILABLE), false)
 })
 
 test('failed request retries once after backend health recovery', async () => {

@@ -291,6 +291,12 @@ button:disabled {
   color: #bfdbfe;
 }
 
+.loading-card-subtle {
+  color: #c6daf8;
+  border-color: rgba(96, 165, 250, 0.38);
+  background: linear-gradient(160deg, rgba(17, 39, 73, 0.38) 0%, rgba(11, 25, 48, 0.26) 100%);
+}
+
 .backend-status {
   padding: 0.7rem 0.95rem;
 }
@@ -298,6 +304,18 @@ button:disabled {
 .backend-status-title {
   margin: 0;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.backend-status-spinner {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 999px;
+  border: 2px solid rgba(191, 219, 254, 0.35);
+  border-top-color: rgba(191, 219, 254, 0.92);
+  animation: backend-spin 900ms linear infinite;
 }
 
 .backend-status-description {
@@ -331,8 +349,9 @@ button:disabled {
   border-radius: 9px;
   padding: 0.15rem;
   gap: 0.2rem;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0;
   background: rgba(7, 16, 32, 0.65);
+  align-items: center;
 }
 
 .indicator-controls {
@@ -344,6 +363,9 @@ button:disabled {
 }
 
 .mode-toggle-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
   background: transparent;
   border-color: transparent;
   color: var(--muted);
@@ -357,8 +379,13 @@ button:disabled {
 }
 
 .copy-all-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
   border-color: rgba(96, 165, 250, 0.45);
   background: rgba(12, 30, 56, 0.85);
+  padding: 0.45rem 0.85rem;
+  margin-left: 0.1rem;
 }
 
 .indicator-group-grid {
@@ -536,6 +563,18 @@ th {
   line-height: 1.45;
 }
 
+@keyframes backend-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backend-status-spinner {
+    animation: none;
+  }
+}
+
 @media (max-width: 720px) {
   #root {
     padding: 0.9rem;
@@ -569,5 +608,9 @@ th {
     right: 0.8rem;
     left: 0.8rem;
     bottom: 0.8rem;
+  }
+
+  .copy-all-button {
+    margin-left: 0;
   }
 }

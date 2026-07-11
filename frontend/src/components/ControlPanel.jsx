@@ -8,6 +8,7 @@ function ControlPanel({
   defaultCategory,
   uploadSummary,
   loading,
+  lookbackRefreshing,
   onRawTextChange,
   onLookbackChange,
   onCampaignNameChange,
@@ -104,7 +105,7 @@ function ControlPanel({
           className="lookback-select"
           value={lookbackDays}
           onChange={(event) => onLookbackChange(Number(event.target.value))}
-          disabled={loading}
+          disabled={loading || lookbackRefreshing}
         >
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>

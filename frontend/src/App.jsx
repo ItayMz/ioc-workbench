@@ -9,6 +9,7 @@ import {
   getBackendStatusContent,
   isBackendConnected,
   runRequestWithSingleHealthRecovery,
+  shouldShowBackendSpinner,
   shouldDisableBackendActions,
   waitForBackendAvailability,
 } from './services/backendHealth.js'
@@ -20,12 +21,19 @@ import {
 } from './services/iocApi'
 import { DEFAULT_DEFENDER_CATEGORY, normalizeDefaultCategory } from './services/defenderCategories.js'
 import { getInitialRawText, resolveExportRequest } from './services/exportState'
+import {
+  applyLookbackRefreshResult,
+  buildLookbackRefreshPayload,
+  DEFAULT_LOOKBACK_DAYS,
+  LOOKBACK_REFRESH_FAILURE_MESSAGE,
+  shouldAttemptLookbackRefresh,
+} from './services/lookbackRefresh.js'
 import './styles/theme.css'
 import './styles/app.css'
 
 function App() {
   const [rawText, setRawText] = useState(getInitialRawText())
-  const [lookbackDays, setLookbackDays] = useState(90)
+  const [lookbackDays, setLookbackDays] = useState(DEFAULT_LOOKBACK_DAYS)
   const [parseResult, setParseResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -39,8 +47,10 @@ function App() {
   const [clearVersion, setClearVersion] = useState(0)
   const [backendConnectionState, setBackendConnectionState] = useState(BACKEND_CONNECTION_STATES.CHECKING)
   const [showConnectedBanner, setShowConnectedBanner] = useState(false)
+  const [isLookbackRefreshing, setIsLookbackRefreshing] = useState(false)
   const isMountedRef = useRef(true)
   const connectedHideTimerRef = useRef(null)
+  const lookbackRefreshInFlightRef = useRef(false)
 
   const exportState = resolveExportRequest({
     lastSuccessfulParsePayload,
@@ -49,6 +59,7 @@ function App() {
 
   const backendActionsDisabled = shouldDisableBackendActions(backendConnectionState, loading)
   const backendStatusContent = getBackendStatusContent(backendConnectionState)
+  const showBackendStatusSpinner = shouldShowBackendSpinner(backendConnectionState)
 
   const onBackendStateChange = (nextState) => {
     if (!isMountedRef.current) {
@@ -195,6 +206,7 @@ function App() {
 
   const handleClear = () => {
     setRawText('')
+    setLookbackDays(DEFAULT_LOOKBACK_DAYS)
     setParseResult(null)
     setErrorMessage('')
     setCampaignName('')
@@ -204,7 +216,54 @@ function App() {
     setIocMetadata([])
     setLastSuccessfulParsePayload(null)
     setLastSuccessfulParseResult(null)
+    lookbackRefreshInFlightRef.current = false
+    setIsLookbackRefreshing(false)
     setClearVersion((current) => current + 1)
+  }
+
+  const handleLookbackChange = async (nextLookbackDays) => {
+    const normalizedLookbackDays = Number(nextLookbackDays)
+    setLookbackDays(normalizedLookbackDays)
+
+    const backendConnected = isBackendConnected(backendConnectionState)
+    if (!shouldAttemptLookbackRefresh({
+      nextLookbackDays: normalizedLookbackDays,
+      backendConnected,
+      canExport: exportState.canExport,
+      lastSuccessfulParsePayload,
+      refreshInFlight: lookbackRefreshInFlightRef.current,
+    })) {
+      return
+    }
+
+    const refreshPayload = buildLookbackRefreshPayload(lastSuccessfulParsePayload, normalizedLookbackDays)
+    if (!refreshPayload) {
+      return
+    }
+
+    lookbackRefreshInFlightRef.current = true
+    setIsLookbackRefreshing(true)
+    setErrorMessage('')
+
+    try {
+      const refreshedData = await runRequestWithSingleHealthRecovery(
+        () => parseIocsWithMetadata(refreshPayload),
+        {
+          checkBackendHealth,
+          onStateChange: onBackendStateChange,
+        },
+      )
+
+      const nextParseResult = applyLookbackRefreshResult(lastSuccessfulParseResult, refreshedData)
+      setParseResult(nextParseResult)
+      setLastSuccessfulParseResult(nextParseResult)
+      setLastSuccessfulParsePayload(refreshPayload)
+    } catch {
+      setErrorMessage(LOOKBACK_REFRESH_FAILURE_MESSAGE)
+    } finally {
+      lookbackRefreshInFlightRef.current = false
+      setIsLookbackRefreshing(false)
+    }
   }
 
   return (
@@ -220,7 +279,10 @@ function App() {
 
       {(backendConnectionState !== BACKEND_CONNECTION_STATES.CONNECTED || showConnectedBanner) && (
         <section className={`card backend-status backend-status-${backendStatusContent.tone}`} aria-live="polite">
-          <p className="backend-status-title">{backendStatusContent.title}</p>
+          <p className="backend-status-title">
+            {showBackendStatusSpinner && <span className="backend-status-spinner" aria-hidden="true" />}
+            <span>{backendStatusContent.title}</span>
+          </p>
           {backendStatusContent.description && (
             <p className="muted backend-status-description">{backendStatusContent.description}</p>
           )}
@@ -234,8 +296,9 @@ function App() {
         defaultCategory={defaultCategory}
         uploadSummary={uploadSummary}
         loading={loading}
+        lookbackRefreshing={isLookbackRefreshing}
         onRawTextChange={setRawText}
-        onLookbackChange={setLookbackDays}
+        onLookbackChange={handleLookbackChange}
         onCampaignNameChange={setCampaignName}
         onDefaultCategoryChange={setDefaultCategory}
         onProcess={handleProcess}
@@ -253,6 +316,12 @@ function App() {
       {loading && (
         <section className="card loading-card" aria-live="polite">
           Processing IOC payload via backend API...
+        </section>
+      )}
+
+      {!loading && isLookbackRefreshing && (
+        <section className="card loading-card loading-card-subtle" aria-live="polite">
+          Refreshing KQL queries for the selected lookback...
         </section>
       )}
 

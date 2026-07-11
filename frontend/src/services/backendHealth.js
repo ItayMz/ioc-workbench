@@ -56,6 +56,10 @@ export function isBackendConnected(state) {
   return state === BACKEND_CONNECTION_STATES.CONNECTED
 }
 
+export function shouldShowBackendSpinner(state) {
+  return state === BACKEND_CONNECTION_STATES.CHECKING || state === BACKEND_CONNECTION_STATES.WAKING
+}
+
 export function shouldDisableBackendActions(connectionState, loading) {
   return Boolean(loading) || !isBackendConnected(connectionState)
 }
