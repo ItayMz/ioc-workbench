@@ -1,10 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ControlPanel from './components/ControlPanel'
 import ErrorBanner from './components/ErrorBanner'
 import IndicatorResults from './components/IndicatorResults'
 import KqlCards from './components/KqlCards'
 import SummaryCards from './components/SummaryCards'
-import { exportDefenderCsv, parseIocsWithMetadata, uploadFiles } from './services/iocApi'
+import {
+  BACKEND_CONNECTION_STATES,
+  getBackendStatusContent,
+  isBackendConnected,
+  runRequestWithSingleHealthRecovery,
+  shouldDisableBackendActions,
+  waitForBackendAvailability,
+} from './services/backendHealth.js'
+import {
+  checkBackendHealth,
+  exportDefenderCsv,
+  parseIocsWithMetadata,
+  uploadFiles,
+} from './services/iocApi'
 import { DEFAULT_DEFENDER_CATEGORY, normalizeDefaultCategory } from './services/defenderCategories.js'
 import { getInitialRawText, resolveExportRequest } from './services/exportState'
 import './styles/theme.css'
@@ -24,11 +37,61 @@ function App() {
   const [lastSuccessfulParsePayload, setLastSuccessfulParsePayload] = useState(null)
   const [lastSuccessfulParseResult, setLastSuccessfulParseResult] = useState(null)
   const [clearVersion, setClearVersion] = useState(0)
+  const [backendConnectionState, setBackendConnectionState] = useState(BACKEND_CONNECTION_STATES.CHECKING)
+  const [showConnectedBanner, setShowConnectedBanner] = useState(false)
+  const isMountedRef = useRef(true)
+  const connectedHideTimerRef = useRef(null)
 
   const exportState = resolveExportRequest({
     lastSuccessfulParsePayload,
     lastSuccessfulParseResult,
   })
+
+  const backendActionsDisabled = shouldDisableBackendActions(backendConnectionState, loading)
+  const backendStatusContent = getBackendStatusContent(backendConnectionState)
+
+  const onBackendStateChange = (nextState) => {
+    if (!isMountedRef.current) {
+      return
+    }
+
+    setBackendConnectionState(nextState)
+
+    if (nextState === BACKEND_CONNECTION_STATES.CONNECTED) {
+      setShowConnectedBanner(true)
+
+      if (connectedHideTimerRef.current) {
+        clearTimeout(connectedHideTimerRef.current)
+      }
+
+      connectedHideTimerRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setShowConnectedBanner(false)
+        }
+      }, 2200)
+
+      return
+    }
+
+    setShowConnectedBanner(true)
+  }
+
+  const runHealthCheck = () => waitForBackendAvailability({
+    checkBackendHealth,
+    onStateChange: onBackendStateChange,
+  })
+
+  useEffect(() => {
+    isMountedRef.current = true
+    runHealthCheck()
+
+    return () => {
+      isMountedRef.current = false
+      if (connectedHideTimerRef.current) {
+        clearTimeout(connectedHideTimerRef.current)
+      }
+    }
+  }, [])
 
   const buildRequestPayload = () => ({
     rawText,
@@ -39,12 +102,23 @@ function App() {
   })
 
   const handleProcess = async () => {
+    if (!isBackendConnected(backendConnectionState)) {
+      setErrorMessage('Backend is currently unavailable. Please try again shortly.')
+      return
+    }
+
     setLoading(true)
     setErrorMessage('')
 
     try {
       const requestPayload = buildRequestPayload()
-      const data = await parseIocsWithMetadata(requestPayload)
+      const data = await runRequestWithSingleHealthRecovery(
+        () => parseIocsWithMetadata(requestPayload),
+        {
+          checkBackendHealth,
+          onStateChange: onBackendStateChange,
+        },
+      )
       setParseResult(data)
       setLastSuccessfulParsePayload(requestPayload)
       setLastSuccessfulParseResult(data)
@@ -57,15 +131,26 @@ function App() {
   }
 
   const handleUpload = async (files) => {
+    if (!isBackendConnected(backendConnectionState)) {
+      setErrorMessage('Backend is currently unavailable. Please try again shortly.')
+      return
+    }
+
     setLoading(true)
     setErrorMessage('')
 
     try {
-      const { data, summary, iocMetadata: parsedMetadata, requestPayload } = await uploadFiles(
-        files,
-        lookbackDays,
-        campaignName,
-        defaultCategory,
+      const {
+        data,
+        summary,
+        iocMetadata: parsedMetadata,
+        requestPayload,
+      } = await runRequestWithSingleHealthRecovery(
+        () => uploadFiles(files, lookbackDays, campaignName, defaultCategory),
+        {
+          checkBackendHealth,
+          onStateChange: onBackendStateChange,
+        },
       )
       setUploadSummary(summary)
       setDetectedCampaignName(summary.detectedCampaignName)
@@ -82,6 +167,11 @@ function App() {
   }
 
   const handleExport = async () => {
+    if (!isBackendConnected(backendConnectionState)) {
+      setErrorMessage('Backend is currently unavailable. Please try again shortly.')
+      return
+    }
+
     const { payload, error } = exportState
     if (!payload) {
       setErrorMessage(error)
@@ -128,6 +218,15 @@ function App() {
         <span className="status-badge">API Driven</span>
       </header>
 
+      {(backendConnectionState !== BACKEND_CONNECTION_STATES.CONNECTED || showConnectedBanner) && (
+        <section className={`card backend-status backend-status-${backendStatusContent.tone}`} aria-live="polite">
+          <p className="backend-status-title">{backendStatusContent.title}</p>
+          {backendStatusContent.description && (
+            <p className="muted backend-status-description">{backendStatusContent.description}</p>
+          )}
+        </section>
+      )}
+
       <ControlPanel
         rawText={rawText}
         lookbackDays={lookbackDays}
@@ -144,6 +243,8 @@ function App() {
         onExport={handleExport}
         onClear={handleClear}
         canExport={exportState.canExport}
+        backendConnected={isBackendConnected(backendConnectionState)}
+        backendActionsDisabled={backendActionsDisabled}
         clearVersion={clearVersion}
       />
 

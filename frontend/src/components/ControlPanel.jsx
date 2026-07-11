@@ -17,6 +17,8 @@ function ControlPanel({
   onExport,
   onClear,
   canExport,
+  backendConnected,
+  backendActionsDisabled,
   clearVersion,
 }) {
   const uploadRef = useRef(null)
@@ -28,7 +30,7 @@ function ControlPanel({
 
   const onFilePicked = async (event) => {
     const files = Array.from(event.target.files || [])
-    if (!files.length) {
+    if (!files.length || backendActionsDisabled) {
       return
     }
 
@@ -38,6 +40,11 @@ function ControlPanel({
 
   const onDragOver = (event) => {
     event.preventDefault()
+
+    if (backendActionsDisabled) {
+      return
+    }
+
     setIsDragOver(true)
   }
 
@@ -50,8 +57,12 @@ function ControlPanel({
     event.preventDefault()
     setIsDragOver(false)
 
+    if (backendActionsDisabled) {
+      return
+    }
+
     const files = Array.from(event.dataTransfer?.files || [])
-    if (!files.length) {
+    if (!files.length || backendActionsDisabled) {
       return
     }
 
@@ -119,13 +130,13 @@ function ControlPanel({
       </div>
 
       <div className="button-row">
-        <button className="primary" type="button" onClick={onProcess} disabled={loading}>
+        <button className="primary" type="button" onClick={onProcess} disabled={backendActionsDisabled}>
           {loading ? 'Processing...' : 'Process IOCs'}
         </button>
-        <button type="button" onClick={() => uploadRef.current?.click()} disabled={loading}>
+        <button type="button" onClick={() => uploadRef.current?.click()} disabled={backendActionsDisabled}>
           Upload CSV/TXT Files
         </button>
-        <button type="button" onClick={onExport} disabled={loading || !canExport}>
+        <button type="button" onClick={onExport} disabled={backendActionsDisabled || !canExport}>
           Export Defender CSV
         </button>
         <button type="button" className="button-clear" onClick={onClear} disabled={loading}>
@@ -134,7 +145,7 @@ function ControlPanel({
       </div>
 
       <div
-        className={`drop-zone${isDragOver ? ' drop-zone-active' : ''}`}
+        className={`drop-zone${isDragOver ? ' drop-zone-active' : ''}${backendActionsDisabled ? ' drop-zone-disabled' : ''}`}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
@@ -142,6 +153,10 @@ function ControlPanel({
         tabIndex={0}
         onClick={() => uploadRef.current?.click()}
         onKeyDown={(event) => {
+          if (backendActionsDisabled) {
+            return
+          }
+
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             uploadRef.current?.click()
@@ -151,6 +166,9 @@ function ControlPanel({
       >
         <p><strong>Drag and drop CSV/TXT files here</strong></p>
         <p className="muted">Supports multi-file drop and uses the same upload processing pipeline.</p>
+        {!backendConnected && (
+          <p className="muted">Upload processing is disabled until backend connection is available.</p>
+        )}
       </div>
 
       {uploadSummary && (
@@ -169,6 +187,7 @@ function ControlPanel({
         multiple
         onChange={onFilePicked}
         className="hidden-input"
+        disabled={backendActionsDisabled}
       />
     </section>
   )

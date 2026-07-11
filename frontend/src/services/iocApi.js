@@ -37,6 +37,15 @@ export async function parseIocs(rawText, lookbackDays, campaignName = null) {
   return parseJsonResponse(response)
 }
 
+export async function checkBackendHealth() {
+  const response = await fetch(`${API_BASE_URL}/`, {
+    method: 'GET',
+  })
+
+  const payload = await parseJsonResponse(response)
+  return payload?.status === 'ok'
+}
+
 export async function parseIocsWithMetadata({ rawText, lookbackDays, campaignName = null, defaultCategory = null, iocMetadata = null }) {
   const resolvedCampaignName = resolveCampaignName(campaignName, null)
 
