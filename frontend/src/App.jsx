@@ -19,6 +19,7 @@ import {
   parseIocsWithMetadata,
   uploadFiles,
 } from './services/iocApi'
+import { mergeAccumulatedSubmission } from './services/accumulation.js'
 import { DEFAULT_DEFENDER_CATEGORY, normalizeDefaultCategory } from './services/defenderCategories.js'
 import { getInitialRawText, resolveExportRequest } from './services/exportState'
 import {
@@ -112,6 +113,24 @@ function App() {
     iocMetadata: iocMetadata.length ? iocMetadata : null,
   })
 
+  const buildMergedRequestPayload = ({ incomingPayload, incomingResult }) => mergeAccumulatedSubmission({
+    currentPayload: lastSuccessfulParsePayload,
+    currentResult: lastSuccessfulParseResult,
+    incomingPayload,
+    incomingResult,
+  })
+
+  const assertAdditiveSubmissionHasSupportedIocs = (incomingResult) => {
+    const hasAccumulatedResult = Boolean(lastSuccessfulParseResult)
+    const hasSupportedIocs = typeof incomingResult?.valid_count === 'number'
+      ? incomingResult.valid_count > 0
+      : (incomingResult?.indicators || []).some((indicator) => indicator?.valid)
+
+    if (hasAccumulatedResult && !hasSupportedIocs) {
+      throw new Error('No supported IOCs were found in the new submission.')
+    }
+  }
+
   const handleProcess = async () => {
     if (!isBackendConnected(backendConnectionState)) {
       setErrorMessage('Backend is currently unavailable. Please try again shortly.')
@@ -122,19 +141,31 @@ function App() {
     setErrorMessage('')
 
     try {
-      const requestPayload = buildRequestPayload()
-      const data = await runRequestWithSingleHealthRecovery(
-        () => parseIocsWithMetadata(requestPayload),
+      const incomingPayload = buildRequestPayload()
+      const incomingResult = await runRequestWithSingleHealthRecovery(
+        () => parseIocsWithMetadata(incomingPayload),
         {
           checkBackendHealth,
           onStateChange: onBackendStateChange,
         },
       )
-      setParseResult(data)
-      setLastSuccessfulParsePayload(requestPayload)
-      setLastSuccessfulParseResult(data)
+      assertAdditiveSubmissionHasSupportedIocs(incomingResult)
+
+      const mergedPayload = buildMergedRequestPayload({ incomingPayload, incomingResult })
+      const mergedResult = await runRequestWithSingleHealthRecovery(
+        () => parseIocsWithMetadata(mergedPayload),
+        {
+          checkBackendHealth,
+          onStateChange: onBackendStateChange,
+        },
+      )
+
+      setParseResult(mergedResult)
+      setLastSuccessfulParsePayload(mergedPayload)
+      setLastSuccessfulParseResult(mergedResult)
+      setIocMetadata(mergedPayload.iocMetadata || [])
+      setRawText('')
     } catch (error) {
-      setParseResult(null)
       setErrorMessage(error.message)
     } finally {
       setLoading(false)
@@ -152,10 +183,10 @@ function App() {
 
     try {
       const {
-        data,
+        data: incomingResult,
         summary,
         iocMetadata: parsedMetadata,
-        requestPayload,
+        requestPayload: incomingPayload,
       } = await runRequestWithSingleHealthRecovery(
         () => uploadFiles(files, lookbackDays, campaignName, defaultCategory),
         {
@@ -163,14 +194,31 @@ function App() {
           onStateChange: onBackendStateChange,
         },
       )
+      assertAdditiveSubmissionHasSupportedIocs(incomingResult)
+
+      const mergedPayload = buildMergedRequestPayload({
+        incomingPayload: {
+          ...incomingPayload,
+          iocMetadata: parsedMetadata || [],
+        },
+        incomingResult,
+      })
+      const mergedResult = await runRequestWithSingleHealthRecovery(
+        () => parseIocsWithMetadata(mergedPayload),
+        {
+          checkBackendHealth,
+          onStateChange: onBackendStateChange,
+        },
+      )
+
       setUploadSummary(summary)
       setDetectedCampaignName(summary.detectedCampaignName)
-      setIocMetadata(parsedMetadata || [])
-      setLastSuccessfulParsePayload(requestPayload)
-      setLastSuccessfulParseResult(data)
-      setParseResult(data)
+      setIocMetadata(mergedPayload.iocMetadata || [])
+      setLastSuccessfulParsePayload(mergedPayload)
+      setLastSuccessfulParseResult(mergedResult)
+      setParseResult(mergedResult)
+      setRawText('')
     } catch (error) {
-      setParseResult(null)
       setErrorMessage(error.message)
     } finally {
       setLoading(false)
@@ -306,6 +354,7 @@ function App() {
         onExport={handleExport}
         onClear={handleClear}
         canExport={exportState.canExport}
+        hasAccumulatedResult={Boolean(lastSuccessfulParseResult)}
         backendConnected={isBackendConnected(backendConnectionState)}
         backendActionsDisabled={backendActionsDisabled}
         clearVersion={clearVersion}

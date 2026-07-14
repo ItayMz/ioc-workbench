@@ -1,7 +1,12 @@
 import csv
 import io
 import re
+from io import BytesIO
 from ipaddress import ip_address
+from zipfile import BadZipFile
+
+from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 
 from app.enums.action import Action
 from app.enums.category import Category
@@ -84,7 +89,17 @@ def _deduplicate_indicators(indicators: list[ParsedIOC]) -> list[ParsedIOC]:
 
 
 def parse_iocs(values: list[str]) -> list[ParsedIOC]:
-    indicators = [parse_ioc(value) for value in values if isinstance(value, str) and value.strip()]
+    indicators = []
+    for value in values:
+        if not isinstance(value, str) or not value.strip():
+            continue
+
+        parsed = parse_ioc(value)
+        if parsed.indicator_type is IndicatorType.SENDER_EMAIL_ADDRESS:
+            continue
+
+        indicators.append(parsed)
+
     return _deduplicate_indicators(indicators)
 
 
@@ -100,8 +115,11 @@ def prepare_text_from_upload(file_bytes: bytes, filename: str) -> str:
     if len(file_bytes) > MAX_UPLOAD_FILE_SIZE_BYTES:
         raise ValueError("The uploaded file exceeds the 5 MB limit.")
 
-    if not filename or not filename.lower().endswith((".csv", ".txt")):
-        raise ValueError("Unsupported file type. Please upload a .csv or .txt file.")
+    if not filename or not filename.lower().endswith((".csv", ".txt", ".xlsx")):
+        raise ValueError("Unsupported file type. Please upload a .csv, .txt, or .xlsx file.")
+
+    if filename.lower().endswith(".xlsx"):
+        return _prepare_text_from_xlsx_upload(file_bytes)
 
     try:
         text = file_bytes.decode("utf-8")
@@ -130,6 +148,34 @@ def prepare_text_from_upload(file_bytes: bytes, filename: str) -> str:
         value = row[0].strip()
         if value:
             normalized_lines.append(value)
+
+    return "\n".join(normalized_lines)
+
+
+def _prepare_text_from_xlsx_upload(file_bytes: bytes) -> str:
+    try:
+        workbook = load_workbook(filename=BytesIO(file_bytes), read_only=True, data_only=True)
+    except (BadZipFile, InvalidFileException, OSError, ValueError) as exc:
+        raise ValueError("The uploaded XLSX file is corrupted or invalid.") from exc
+
+    normalized_lines: list[str] = []
+
+    for worksheet in workbook.worksheets:
+        for row in worksheet.iter_rows(values_only=True):
+            if not row:
+                continue
+
+            populated_cells = [str(cell).strip() for cell in row if cell is not None and str(cell).strip()]
+            if not populated_cells:
+                continue
+
+            if len(populated_cells) != 1:
+                raise ValueError("Malformed XLSX file. Please provide one IOC per row.")
+
+            normalized_lines.append(populated_cells[0])
+
+    if not normalized_lines:
+        raise ValueError("The uploaded file is empty.")
 
     return "\n".join(normalized_lines)
 

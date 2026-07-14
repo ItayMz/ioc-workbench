@@ -18,6 +18,7 @@ function ControlPanel({
   onExport,
   onClear,
   canExport,
+  hasAccumulatedResult,
   backendConnected,
   backendActionsDisabled,
   clearVersion,
@@ -74,7 +75,7 @@ function ControlPanel({
     <section className="card control-panel">
       <div className="panel-top">
         <h2>IOC Intake</h2>
-        <p className="muted">Paste raw intel text or upload a CSV/TXT file. Processing runs through the backend API.</p>
+        <p className="muted">Paste raw intel text or upload a CSV/TXT/XLSX file. Processing runs through the backend API.</p>
       </div>
 
       <textarea
@@ -132,10 +133,10 @@ function ControlPanel({
 
       <div className="button-row">
         <button className="primary" type="button" onClick={onProcess} disabled={backendActionsDisabled}>
-          {loading ? 'Processing...' : 'Process IOCs'}
+          {loading ? 'Processing...' : (hasAccumulatedResult ? 'Add IOCs' : 'Process IOCs')}
         </button>
         <button type="button" onClick={() => uploadRef.current?.click()} disabled={backendActionsDisabled}>
-          Upload CSV/TXT Files
+          {hasAccumulatedResult ? 'Add Files to Current Export' : 'Upload CSV/TXT/XLSX Files'}
         </button>
         <button type="button" onClick={onExport} disabled={backendActionsDisabled || !canExport}>
           Export Defender CSV
@@ -163,9 +164,9 @@ function ControlPanel({
             uploadRef.current?.click()
           }
         }}
-        aria-label="Drop CSV or TXT files here, or press Enter to browse"
+        aria-label="Drop CSV, TXT, or XLSX files here, or press Enter to browse"
       >
-        <p><strong>Drag and drop CSV/TXT files here</strong></p>
+        <p><strong>Drag and drop CSV/TXT/XLSX files here</strong></p>
         <p className="muted">Supports multi-file drop and uses the same upload processing pipeline.</p>
         {!backendConnected && (
           <p className="muted">Upload processing is disabled until backend connection is available.</p>
@@ -184,7 +185,7 @@ function ControlPanel({
       <input
         ref={uploadRef}
         type="file"
-        accept=".csv,.txt"
+        accept=".csv,.txt,.xlsx"
         multiple
         onChange={onFilePicked}
         className="hidden-input"

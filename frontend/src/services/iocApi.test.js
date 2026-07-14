@@ -1,15 +1,32 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import * as XLSX from 'xlsx'
 
 import { uploadFiles } from './iocApi.js'
 
-function makeFile(name, content) {
+function makeFile(name, content, buffer = null) {
   return {
     name,
     async text() {
       return content
     },
+    async arrayBuffer() {
+      if (buffer == null) {
+        throw new Error('arrayBuffer not available')
+      }
+      return buffer
+    },
   }
+}
+
+function makeXlsxBuffer(rowsBySheet) {
+  const workbook = XLSX.utils.book_new()
+  for (const [sheetName, rows] of rowsBySheet) {
+    const worksheet = XLSX.utils.aoa_to_sheet(rows)
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+  }
+
+  return XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
 }
 
 test('two CSV files with different event_info values do not force one campaign override in request payload', async () => {
@@ -131,4 +148,46 @@ test('upload request payload carries selected defaultCategory', async () => {
 
   assert.equal(capturedBody.defaultCategory, 'Ransomware')
   assert.equal(result.requestPayload.defaultCategory, 'Ransomware')
+})
+
+test('mixed CSV and XLSX upload sends combined metadata and detected campaign', async () => {
+  let capturedBody = null
+
+  global.fetch = async (_url, options) => {
+    capturedBody = JSON.parse(options.body)
+    return {
+      ok: true,
+      async json() {
+        return {
+          indicators: [],
+          valid_count: 0,
+          summary: { valid: 0 },
+        }
+      },
+    }
+  }
+
+  const csv = 'value,event_info,category\nhttps://from-csv.example,Campaign A,Execution'
+  const xlsxBuffer = makeXlsxBuffer([
+    ['Intel', [
+      ['value', 'event_info', 'category'],
+      ['8.8.8.8', 'Campaign A', 'C2'],
+    ]],
+  ])
+
+  const result = await uploadFiles(
+    [makeFile('first.csv', csv), makeFile('second.xlsx', '', xlsxBuffer)],
+    90,
+    null,
+  )
+
+  assert.equal(result.summary.detectedCampaignName, 'Campaign A')
+  assert.equal(capturedBody.raw_text, 'https://from-csv.example\n8.8.8.8')
+  assert.deepEqual(
+    capturedBody.iocMetadata.map((row) => ({ value: row.value, campaignName: row.campaignName, category: row.category })),
+    [
+      { value: 'https://from-csv.example', campaignName: 'Campaign A', category: 'Execution' },
+      { value: '8.8.8.8', campaignName: 'Campaign A', category: 'CommandAndControl' },
+    ],
+  )
 })

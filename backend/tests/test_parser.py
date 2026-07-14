@@ -1,5 +1,8 @@
 from pathlib import Path
 import sys
+from io import BytesIO
+
+from openpyxl import Workbook
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -106,6 +109,13 @@ def test_parse_bulk_text_trims_whitespace_and_ignores_blank_lines():
     assert [indicator.indicator_type for indicator in indicators] == [IndicatorType.URL, IndicatorType.IP_ADDRESS]
 
 
+def test_parse_bulk_text_ignores_email_addresses_completely():
+    indicators = parse_bulk_text("user@test.com\n1.1.1.1\nevil.com")
+
+    assert [indicator.refanged_value for indicator in indicators] == ["1.1.1.1", "evil.com"]
+    assert [indicator.indicator_type for indicator in indicators] == [IndicatorType.IP_ADDRESS, IndicatorType.DOMAIN_NAME]
+
+
 def test_parse_ioc_rejects_extremely_long_input_without_crashing():
     parsed = parse_ioc("x" * 20000)
 
@@ -147,3 +157,47 @@ def test_prepare_text_from_upload_rejects_malformed_csv():
         assert "malformed csv" in str(exc).lower()
     else:
         raise AssertionError("Expected ValueError for malformed CSV")
+
+
+def test_prepare_text_from_upload_accepts_xlsx_with_blank_rows_and_mixed_types():
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(["8.8.8.8"])
+    worksheet.append([None])
+    worksheet.append([12345])
+    worksheet.append(["evil.com"])
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    prepared = prepare_text_from_upload(buffer.getvalue(), "sample.xlsx")
+    assert prepared == "8.8.8.8\n12345\nevil.com"
+
+
+def test_prepare_text_from_upload_rejects_corrupted_xlsx():
+    try:
+        prepare_text_from_upload(b"not-a-valid-workbook", "bad.xlsx")
+    except ValueError as exc:
+        assert "xlsx" in str(exc).lower() and "invalid" in str(exc).lower()
+    else:
+        raise AssertionError("Expected ValueError for corrupted XLSX")
+
+
+def test_prepare_text_from_upload_reads_multiple_xlsx_sheets_and_ignores_blank_rows():
+    workbook = Workbook()
+    first = workbook.active
+    first.title = "SheetA"
+    first.append(["https://one.example"])
+    first.append([None])
+
+    second = workbook.create_sheet(title="SheetB")
+    second.append(["8.8.8.8"])
+
+    third = workbook.create_sheet(title="Blank")
+    third.append([None])
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    prepared = prepare_text_from_upload(buffer.getvalue(), "multi.xlsx")
+    assert prepared == "https://one.example\n8.8.8.8"

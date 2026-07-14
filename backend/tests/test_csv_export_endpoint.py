@@ -209,3 +209,76 @@ def test_export_csv_endpoint_invalid_manual_default_category_falls_back_to_malwa
 
     row = _read_csv_response(response)[1]
     assert row[9] == 'Malware'
+
+
+def test_export_csv_endpoint_mixed_source_metadata_excludes_email_rows():
+    response = export_campaign_csv(
+        ParseRequest(
+            raw_text='https://from-csv.example 8.8.8.8 user@test.com',
+            iocMetadata=[
+                IOCMetadata(
+                    value='https://from-csv.example',
+                    campaignName='Campaign A',
+                    category='Execution',
+                    sourceFile='first.csv',
+                ),
+                IOCMetadata(
+                    value='8.8.8.8',
+                    campaignName='Campaign A',
+                    category='C2',
+                    sourceFile='second.xlsx',
+                ),
+                IOCMetadata(
+                    value='user@test.com',
+                    campaignName='Campaign A',
+                    category='Discovery',
+                    sourceFile='second.xlsx',
+                ),
+            ],
+        )
+    )
+
+    rows = _read_csv_response(response)
+    data_rows = rows[1:]
+
+    assert len(data_rows) == 2
+    assert all(row[0] != 'SenderEmailAddress' for row in data_rows)
+
+    by_value = {row[1]: row for row in data_rows}
+    assert by_value['https://from-csv.example'][5] == 'Campaign A IOC'
+    assert by_value['https://from-csv.example'][9] == 'Execution'
+    assert by_value['8.8.8.8'][5] == 'Campaign A IOC'
+    assert by_value['8.8.8.8'][9] == 'CommandAndControl'
+
+
+def test_export_csv_reference_style_content_excludes_labels_emails_and_port_notes():
+    raw_text = "\n".join([
+        "HASH",
+        "1d865b3a5b803febddaa2a0c07099ceb",
+        "1d0f8dd934cd975e0b70e1c2d8b1c5b2d438b25d",
+        "a02f124c5ce4180bd130a62ee03262f399c33491de3aed36e0b15155ae4926c0",
+        "URL",
+        "hxxps://45[.]150[.]109[.]151[.]sslip[.]io:23088/app/js/jquery[.]min[.]js",
+        "hxxps://194[.]213[.]18[.]133[.]sslip[.]io:23088/app/js/jquery[.]min[.]js",
+        "hxxps://45[.]150[.]109[.]151[.]sslip[.]io On port 23088",
+        "hxxps://194[.]213[.]18[.]133[.]sslip[.]io On port 23088",
+        "hxxp://45[.]86[.]229[.]111/slw On port 8080",
+        "IP",
+        "45[.]150[.]109[.]151",
+        "194[.]213[.]18[.]133",
+        "45[.]86[.]229[.]111",
+        "EMAIL",
+        "jpcontreras@newfield[.]cl",
+    ])
+
+    response = export_campaign_csv(ParseRequest(raw_text=raw_text))
+    rows = _read_csv_response(response)
+    values = [row[1] for row in rows[1:]]
+
+    assert 'HASH' not in values
+    assert 'URL' not in values
+    assert 'IP' not in values
+    assert 'EMAIL' not in values
+    assert 'On port 23088' not in values
+    assert 'On port 8080' not in values
+    assert not any('@' in value for value in values)

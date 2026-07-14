@@ -16,18 +16,16 @@ def test_parse_endpoint_returns_bulk_results():
         ParseRequest(raw_text="https://example.com 8.8.8.8 user@example.com")
     )
 
-    assert response.total_count == 3
-    assert response.valid_count == 3
+    assert response.total_count == 2
+    assert response.valid_count == 2
     assert response.invalid_count == 0
     assert [indicator.indicator_type.value for indicator in response.indicators] == [
         "Url",
         "IpAddress",
-        "SenderEmailAddress",
     ]
     assert response.counts_by_type == {
         "Url": 1,
         "IpAddress": 1,
-        "SenderEmailAddress": 1,
     }
 
 
@@ -52,7 +50,6 @@ def test_parse_bulk_text_extracts_iocs_from_free_text():
         "https://evil.com",
         "evil.com",
         "1.2.3.4",
-        "test@example.com",
         "8.8.8.8",
         "https://bad.com/login",
     ]
@@ -60,11 +57,52 @@ def test_parse_bulk_text_extracts_iocs_from_free_text():
         IndicatorType.URL,
         IndicatorType.DOMAIN_NAME,
         IndicatorType.IP_ADDRESS,
-        IndicatorType.SENDER_EMAIL_ADDRESS,
         IndicatorType.IP_ADDRESS,
         IndicatorType.URL,
     ]
 
+
+
+def test_parse_endpoint_ignores_email_iocs_completely():
+    response = parse_bulk_iocs(ParseRequest(raw_text="user@test.com 1.1.1.1 evil.com"))
+
+    assert response.total_count == 2
+    assert response.valid_count == 2
+    assert response.invalid_count == 0
+    assert [indicator.refanged_value for indicator in response.indicators] == ["1.1.1.1", "evil.com"]
+    assert response.counts_by_type == {
+        "IpAddress": 1,
+        "DomainName": 1,
+    }
+
+
+def test_parse_endpoint_mixed_csv_xlsx_metadata_preserves_campaign_and_kql_output():
+    response = parse_bulk_iocs(
+        ParseRequest(
+            raw_text="https://from-csv.example 8.8.8.8 user@test.com",
+            iocMetadata=[
+                {
+                    "value": "https://from-csv.example",
+                    "campaignName": "Campaign A",
+                    "category": "Execution",
+                    "sourceFile": "first.csv",
+                },
+                {
+                    "value": "8.8.8.8",
+                    "campaignName": "Campaign A",
+                    "category": "C2",
+                    "sourceFile": "second.xlsx",
+                },
+            ],
+        )
+    )
+
+    assert response.title == "Campaign A IOC"
+    assert response.total_count == 2
+    assert response.counts_by_type == {"Url": 1, "IpAddress": 1}
+    assert response.kqlQueries["fileHash"] is None
+    assert response.kqlQueries["ip"] is not None
+    assert response.kqlQueries["urlWebDomain"] is not None
 
 def test_parse_endpoint_returns_correct_actions_for_hashes_and_urls():
     response = parse_bulk_iocs(

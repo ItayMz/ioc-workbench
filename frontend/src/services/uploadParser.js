@@ -1,6 +1,18 @@
+import * as XLSX from 'xlsx'
+
 function normalizeHeader(value) {
   return String(value || '').trim().toLowerCase()
 }
+
+const VALUE_COLUMN_CANDIDATES = [
+  'value',
+  'indicator',
+  'ioc',
+  'ioc_value',
+  'indicator_value',
+  'observable',
+  'artifact',
+]
 
 const CATEGORY_COLUMN_CANDIDATES = [
   'category',
@@ -149,26 +161,117 @@ function normalizeCategory(value) {
   return null
 }
 
-function parseCsvContent(text, sourceFile) {
-  const rows = splitCsvRows(text)
-  if (!rows.length) {
-    throw new Error('Uploaded CSV is empty.')
+function findValueColumnIndex(headers) {
+  for (const candidate of VALUE_COLUMN_CANDIDATES) {
+    const index = headers.indexOf(candidate)
+    if (index !== -1) {
+      return index
+    }
   }
 
-  const headers = rows[0].map(normalizeHeader)
-  const valueIndex = headers.indexOf('value')
+  return -1
+}
+
+function extractIocCandidatesFromText(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return []
+  }
+
+  const candidates = []
+  const tokens = text
+    .split(/[\s,;|]+/)
+    .map((token) => token.trim().replace(/^[()\[\]{}:;,'"]+|[()\[\]{}:;,'"]+$/g, ''))
+    .filter(Boolean)
+
+  for (const token of tokens) {
+    const lowered = token.toLowerCase()
+
+    // Keep extraction conservative: only tokens that look IOC-like are forwarded.
+    const looksLikeHash = /^[0-9a-fA-F]{32}$/.test(token)
+      || /^[0-9a-fA-F]{40}$/.test(token)
+      || /^[0-9a-fA-F]{64}$/.test(token)
+    const looksLikeUrl = /^(?:https?|hxxps?|https\[:\]|http\[:\])[:/]/i.test(token)
+    const looksLikeIp = /^(?:\d{1,3}|\d{1,3}\[\.\]\d{1,3})(?:\.|\[\.\])\d{1,3}(?:\.|\[\.\])\d{1,3}$/.test(token)
+      || /:/.test(token)
+    const looksLikeDomain = token.includes('.') || token.includes('[.]')
+    const looksLikeEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(token)
+
+    if (looksLikeEmail) {
+      continue
+    }
+
+    if (looksLikeHash || looksLikeUrl || looksLikeIp || looksLikeDomain) {
+      candidates.push(token)
+      continue
+    }
+
+    if (lowered.includes('hxxp') || lowered.includes('http') || lowered.includes('[.]')) {
+      candidates.push(token)
+    }
+  }
+
+  return candidates
+}
+
+function parseRowsWithFallback(rows, sourceFile) {
+  const iocs = []
+  const seen = new Set()
+
+  for (const row of rows || []) {
+    for (const cell of row || []) {
+      if (cell == null) {
+        continue
+      }
+
+      for (const candidate of extractIocCandidatesFromText(cell)) {
+        if (seen.has(candidate)) {
+          continue
+        }
+
+        seen.add(candidate)
+        iocs.push(candidate)
+      }
+    }
+  }
+
+  return {
+    iocs,
+    campaignCandidates: [],
+    metadataEntries: iocs.map((value) => ({
+      value,
+      campaignName: null,
+      category: null,
+      sourceFile,
+    })),
+  }
+}
+
+function parseStructuredRows(rows, sourceFile, emptyMessage) {
+  if (!rows.length) {
+    throw new Error(emptyMessage)
+  }
+
+  const firstNonEmptyRow = rows.find((row) => row.some((cell) => String(cell || '').trim()))
+  if (!firstNonEmptyRow) {
+    throw new Error(emptyMessage)
+  }
+
+  const headers = firstNonEmptyRow.map(normalizeHeader)
+  const valueIndex = findValueColumnIndex(headers)
   const eventInfoIndex = headers.indexOf('event_info')
   const categoryIndex = selectCategoryColumn(headers)
 
   if (valueIndex === -1) {
-    throw new Error('CSV upload requires a "value" column.')
+    return parseRowsWithFallback(rows, sourceFile)
   }
 
   const iocs = []
   const campaignCandidates = []
   const metadataEntries = []
 
-  for (const row of rows.slice(1)) {
+  const startIndex = rows.indexOf(firstNonEmptyRow) + 1
+  for (const row of rows.slice(startIndex)) {
     const iocValue = String(row[valueIndex] || '').trim()
     if (iocValue) {
       iocs.push(iocValue)
@@ -202,6 +305,58 @@ function parseCsvContent(text, sourceFile) {
     campaignCandidates,
     metadataEntries,
   }
+}
+
+function parseCsvContent(text, sourceFile) {
+  const rows = splitCsvRows(text)
+  return parseStructuredRows(rows, sourceFile, 'Uploaded CSV is empty.')
+}
+
+function parseXlsxContent(buffer, sourceFile) {
+  let workbook
+
+  try {
+    workbook = XLSX.read(buffer, { type: 'array' })
+  } catch {
+    throw new Error('The uploaded XLSX file is corrupted or invalid.')
+  }
+
+  const sheetNames = workbook?.SheetNames || []
+  if (!sheetNames.length) {
+    throw new Error('The uploaded file is empty.')
+  }
+
+  const combined = {
+    iocs: [],
+    campaignCandidates: [],
+    metadataEntries: [],
+  }
+
+  let hasTabularData = false
+  for (const sheetName of sheetNames) {
+    const worksheet = workbook.Sheets[sheetName]
+    if (!worksheet) {
+      continue
+    }
+
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+    const hasContent = rows.some((row) => row.some((cell) => String(cell || '').trim()))
+    if (!hasContent) {
+      continue
+    }
+
+    hasTabularData = true
+    const parsed = parseStructuredRows(rows, sourceFile, 'Uploaded XLSX is empty.')
+    combined.iocs.push(...parsed.iocs)
+    combined.campaignCandidates.push(...parsed.campaignCandidates)
+    combined.metadataEntries.push(...parsed.metadataEntries)
+  }
+
+  if (!hasTabularData) {
+    throw new Error('The uploaded file is empty.')
+  }
+
+  return combined
 }
 
 function parseTxtContent(text, sourceFile) {
@@ -245,13 +400,13 @@ export async function parseUploadedFiles(files) {
 
   for (const file of uploadedFiles) {
     const fileName = String(file?.name || '').toLowerCase()
-    const fileContents = await file.text()
-
-    if (!fileContents.trim()) {
-      continue
-    }
 
     if (fileName.endsWith('.csv')) {
+      const fileContents = await file.text()
+      if (!fileContents.trim()) {
+        continue
+      }
+
       const parsed = parseCsvContent(fileContents, file.name)
       combinedIocs.push(...parsed.iocs)
       campaignCandidates.push(...parsed.campaignCandidates)
@@ -260,8 +415,22 @@ export async function parseUploadedFiles(files) {
     }
 
     if (fileName.endsWith('.txt')) {
+      const fileContents = await file.text()
+      if (!fileContents.trim()) {
+        continue
+      }
+
       const parsed = parseTxtContent(fileContents, file.name)
       combinedIocs.push(...parsed.iocs)
+      metadataEntries.push(...parsed.metadataEntries)
+      continue
+    }
+
+    if (fileName.endsWith('.xlsx')) {
+      const arrayBuffer = await file.arrayBuffer()
+      const parsed = parseXlsxContent(arrayBuffer, file.name)
+      combinedIocs.push(...parsed.iocs)
+      campaignCandidates.push(...parsed.campaignCandidates)
       metadataEntries.push(...parsed.metadataEntries)
       continue
     }
@@ -270,7 +439,7 @@ export async function parseUploadedFiles(files) {
   }
 
   if (unsupportedFiles.length) {
-    throw new Error(`Unsupported file type(s): ${unsupportedFiles.join(', ')}. Upload only .csv or .txt files.`)
+    throw new Error(`Unsupported file type(s): ${unsupportedFiles.join(', ')}. Upload only .csv, .txt, or .xlsx files.`)
   }
 
   if (!combinedIocs.length) {
