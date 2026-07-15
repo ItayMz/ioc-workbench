@@ -8,9 +8,10 @@ const kqlCardsPath = resolve(process.cwd(), 'src/components/KqlCards.jsx')
 const senderEmailInfoCardPath = resolve(process.cwd(), 'src/components/SenderEmailInfoCard.jsx')
 const crowdStrikeQueryCardPath = resolve(process.cwd(), 'src/components/CrowdStrikeQueryCard.jsx')
 const crowdStrikeResultsPath = resolve(process.cwd(), 'src/components/CrowdStrikeResults.jsx')
-const crowdStrikeBlockingExportPath = resolve(process.cwd(), 'src/components/CrowdStrikeBlockingExport.jsx')
+const exportSummaryCardsPath = resolve(process.cwd(), 'src/components/ExportSummaryCards.jsx')
 const controlPanelPath = resolve(process.cwd(), 'src/components/ControlPanel.jsx')
 const appPath = resolve(process.cwd(), 'src/App.jsx')
+const summaryCardsPath = resolve(process.cwd(), 'src/components/SummaryCards.jsx')
 const appStylesPath = resolve(process.cwd(), 'src/styles/app.css')
 
 test('Detected Indicators controls keep expected wrapper classes for aligned toggle and Copy All layout', () => {
@@ -34,7 +35,7 @@ test('KQL cards provide temporary copied state UI and restore button text after 
 
   assert.equal(source.includes("'Copy KQL'"), true)
   assert.equal(source.includes("'Copied ✓'"), true)
-  assert.equal(source.includes("Copied!"), true)
+  assert.equal(source.includes('Copied!'), true)
   assert.equal(source.includes('KQL_COPY_RESET_MS = 1800'), true)
   assert.equal(source.includes('setTimeout(() => {'), true)
 })
@@ -57,47 +58,73 @@ test('sender email workflow card includes required title, guidance, and Copy Ema
   assert.equal(source.includes('sender-email-info-card sender-email-info-card-info'), true)
 })
 
-test('workflow selector supports Microsoft Defender and CrowdStrike only', () => {
+test('workflow selector uses badge buttons for Microsoft Defender and CrowdStrike only', () => {
   const source = readFileSync(controlPanelPath, 'utf8')
 
-  assert.equal(source.includes('id="workflowModeSelect"'), true)
+  assert.equal(source.includes('className="workflow-selector"'), true)
+  assert.equal(source.includes('workflow-badge-button'), true)
+  assert.equal(source.includes('onWorkflowModeChange(WORKFLOW_MODE.DEFENDER)'), true)
+  assert.equal(source.includes('onWorkflowModeChange(WORKFLOW_MODE.CROWDSTRIKE)'), true)
   assert.equal(source.includes('Microsoft Defender'), true)
   assert.equal(source.includes('CrowdStrike'), true)
-  assert.equal(source.includes('QRadar'), false)
+  assert.equal(source.includes('workflowModeSelect'), false)
 })
 
-test('control panel uses a shared workflow export button in main action row', () => {
+test('Control panel keeps workflow export action in main action row for Defender only', () => {
   const source = readFileSync(controlPanelPath, 'utf8')
 
+  assert.equal(source.includes('showDefenderControls && ('), true)
   assert.equal(source.includes('{exportButtonLabel}'), true)
   assert.equal(source.includes('onClick={onExport}'), true)
   assert.equal(source.includes('disabled={exportDisabled}'), true)
 })
 
-test('Control panel places CrowdStrike blocking configuration before the shared action bar', () => {
+test('Control panel renders CrowdStrike severity and description configuration', () => {
   const source = readFileSync(controlPanelPath, 'utf8')
-  const configIndex = source.indexOf('{crowdStrikeConfigSection}')
-  const actionRowIndex = source.indexOf('className="button-row"')
 
-  assert.equal(configIndex > -1, true)
-  assert.equal(actionRowIndex > -1, true)
-  assert.equal(configIndex < actionRowIndex, true)
+  assert.equal(source.includes('id="crowdstrikeSeverity"'), true)
+  assert.equal(source.includes('id="crowdstrikeDescription"'), true)
+  assert.equal(source.includes('onCrowdStrikeSeverityChange'), true)
+  assert.equal(source.includes('onCrowdStrikeDescriptionChange'), true)
 })
 
-test('App wires workflow mode to gate Defender KQL cards and show CrowdStrike query results', () => {
+test('Control panel action row includes CrowdStrike and QRadar export buttons in CrowdStrike mode', () => {
+  const source = readFileSync(controlPanelPath, 'utf8')
+
+  assert.equal(source.includes('onCrowdStrikeExport'), true)
+  assert.equal(source.includes('Export CrowdStrike CSV'), true)
+  assert.equal(source.includes('onSecondaryExport'), true)
+  assert.equal(source.includes('{secondaryExportButtonLabel}'), true)
+})
+
+test('App wires workflow mode and keeps Defender/CrowdStrike outputs isolated', () => {
   const source = readFileSync(appPath, 'utf8')
 
   assert.equal(source.includes('const [workflowMode, setWorkflowMode] = useState(WORKFLOW_MODE.DEFENDER)'), true)
   assert.equal(source.includes('workflowPresentation.isDefender ? ('), true)
   assert.equal(source.includes('<KqlCards queries={parseResult.kqlQueries} />'), true)
   assert.equal(source.includes('<CrowdStrikeResults'), true)
-  assert.equal(source.includes('indicators={parseResult.indicators}'), true)
-  assert.equal(source.includes("'Export Defender CSV'"), true)
-  assert.equal(source.includes("'Export CrowdStrike CSV'"), true)
-  assert.equal(source.includes('activeExportHandler'), true)
-  assert.equal(source.includes('handleCrowdStrikeExport'), true)
-  assert.equal(source.includes('crowdStrikeConfigSection={!workflowPresentation.isDefender ? ('), true)
-  assert.equal(source.includes('setWorkflowMode(WORKFLOW_MODE.DEFENDER)'), true)
+  assert.equal(source.includes('<CrowdStrikeBlockingExport'), false)
+  assert.equal(source.includes('<QradarExport'), false)
+})
+
+test('CrowdStrike layout order is detection summary then query then sender card then export summary', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  const summaryIndex = source.indexOf('<SummaryCards')
+  const crowdStrikeBranchIndex = source.indexOf(') : (')
+  const queryIndex = source.indexOf('<CrowdStrikeResults', crowdStrikeBranchIndex)
+  const senderIndex = source.indexOf('{showSenderEmailInfoCard && (', queryIndex)
+  const exportSummaryIndex = source.indexOf('<ExportSummaryCards')
+
+  assert.equal(summaryIndex > -1, true)
+  assert.equal(crowdStrikeBranchIndex > -1, true)
+  assert.equal(queryIndex > -1, true)
+  assert.equal(senderIndex > -1, true)
+  assert.equal(exportSummaryIndex > -1, true)
+  assert.equal(summaryIndex < queryIndex, true)
+  assert.equal(queryIndex < senderIndex, true)
+  assert.equal(senderIndex < exportSummaryIndex, true)
 })
 
 test('CrowdStrike query card includes required title description metadata and Copy Query button', () => {
@@ -110,51 +137,81 @@ test('CrowdStrike query card includes required title description metadata and Co
   assert.equal(source.includes('IOC types:'), true)
 })
 
-test('CrowdStrike query copy payload exactly matches the displayed query string', () => {
+test('CrowdStrike query copy payload exactly matches displayed query and raises success callback', () => {
   const source = readFileSync(crowdStrikeQueryCardPath, 'utf8')
 
   assert.equal(source.includes('navigator.clipboard.writeText(queryData.query)'), true)
   assert.equal(source.includes('<pre className="query-block">{queryData.query}</pre>'), true)
+  assert.equal(source.includes('onCopySuccess?.()'), true)
 })
 
-test('CrowdStrike results renders empty-state message when no valid indicators are available', () => {
+test('CrowdStrike results render improved empty-state wording', () => {
   const source = readFileSync(crowdStrikeResultsPath, 'utf8')
 
-  assert.equal(source.includes('queryData ? ('), true)
-  assert.equal(source.includes('No valid indicators are currently available for a CrowdStrike Advanced Event Search query.'), true)
+  assert.equal(source.includes('No CrowdStrike sweep query available.'), true)
 })
 
-test('CrowdStrike blocking export section includes required controls and guidance', () => {
-  const source = readFileSync(crowdStrikeBlockingExportPath, 'utf8')
+test('CrowdStrike and QRadar configuration cards are removed from results area', () => {
+  const source = readFileSync(appPath, 'utf8')
 
-  assert.equal(source.includes('CrowdStrike Blocking Export'), true)
-  assert.equal(source.includes('Only IPv4, MD5, and SHA256 indicators are included in the CrowdStrike blocking CSV.'), true)
-  assert.equal(source.includes('id="crowdstrikeSeverity"'), true)
-  assert.equal(source.includes('value="high"'), true)
-  assert.equal(source.includes('value="medium"'), true)
-  assert.equal(source.includes('id="crowdstrikeDescription"'), true)
-  assert.equal(source.includes('Total detected:'), true)
-  assert.equal(source.includes('Blocking eligible:'), true)
-  assert.equal(source.includes('Only IPv4, MD5, and SHA256 indicators are eligible for CrowdStrike blocking. All other indicators are included in the Advanced Event Search query only.'), true)
-  assert.equal(source.includes('<button'), false)
-  assert.equal(source.includes('No IPv4, MD5, or SHA256 indicators are available for CrowdStrike blocking export.'), true)
-  assert.equal(source.includes('Use the Export CrowdStrike CSV button in the main action bar to download the file.'), false)
+  assert.equal(source.includes('CrowdStrike Blocking Export'), false)
+  assert.equal(source.includes('QRadar Blocking Export'), false)
+  assert.equal(source.includes('<CrowdStrikeBlockingExport'), false)
+  assert.equal(source.includes('<QradarExport'), false)
 })
 
-test('CrowdStrike blocking export section calculates eligibility without owning export action', () => {
-  const source = readFileSync(crowdStrikeBlockingExportPath, 'utf8')
+test('Detection Summary includes Export Eligibility subsection labels and note', () => {
+  const source = readFileSync(summaryCardsPath, 'utf8')
 
-  assert.equal(source.includes('buildCrowdStrikeBlockingCsv'), true)
-  assert.equal(source.includes('exportCrowdStrikeBlockingCsv'), false)
-  assert.equal(source.includes('campaignName'), false)
+  assert.equal(source.includes('Export Eligibility'), true)
+  assert.equal(source.includes('CrowdStrike Blocking Eligible'), true)
+  assert.equal(source.includes('QRadar Eligible IPs'), true)
+  assert.equal(source.includes('Only IPv4, MD5, and SHA256 indicators are eligible for CrowdStrike blocking.'), true)
 })
 
-test('CrowdStrike results contain Advanced Event Search query only and no blocking configuration controls', () => {
-  const source = readFileSync(crowdStrikeResultsPath, 'utf8')
+test('App shows success toasts for query copy and each export type', () => {
+  const source = readFileSync(appPath, 'utf8')
 
-  assert.equal(source.includes('Advanced Event Search Query'), false)
-  assert.equal(source.includes('CrowdStrikeQueryCard'), true)
-  assert.equal(source.includes('CrowdStrikeBlockingExport'), false)
+  assert.equal(source.includes("✓ Query copied"), true)
+  assert.equal(source.includes("✓ Defender CSV exported"), true)
+  assert.equal(source.includes("✓ CrowdStrike CSV exported"), true)
+  assert.equal(source.includes("✓ QRadar CSV exported"), true)
+  assert.equal(source.includes('<ToastMessage toast={toast} />'), true)
+})
+
+test('Export summary cards show exported count, export type, and filename', () => {
+  const source = readFileSync(exportSummaryCardsPath, 'utf8')
+
+  assert.equal(source.includes('Export Summary'), true)
+  assert.equal(source.includes('Filename:'), true)
+  assert.equal(source.includes('countLabel'), true)
+})
+
+test('App records independent export summaries for Defender CrowdStrike and QRadar', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('defender: null,'), true)
+  assert.equal(source.includes('crowdstrike: null,'), true)
+  assert.equal(source.includes('qradar: null,'), true)
+  assert.equal(source.includes("title: 'Microsoft Defender IOC CSV'"), true)
+  assert.equal(source.includes("title: 'CrowdStrike Blocking CSV'"), true)
+  assert.equal(source.includes("title: 'QRadar CSV'"), true)
+})
+
+test('App preserves existing export handlers while moving CrowdStrike controls to ControlPanel', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('const handleCrowdStrikeExport = () => {'), true)
+  assert.equal(source.includes('const handleQradarExport = () => {'), true)
+  assert.equal(source.includes('exportCrowdStrikeBlockingCsv'), true)
+  assert.equal(source.includes('exportQradarCsv'), true)
+})
+
+test('App renders sender email card only when sender addresses are present', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('showSenderEmailInfoCard && ('), true)
+  assert.equal(source.includes('No sender email addresses detected.'), false)
 })
 
 test('ignored items toggle and ignored panel are removed from detected indicators UI', () => {
@@ -163,15 +220,4 @@ test('ignored items toggle and ignored panel are removed from detected indicator
   assert.equal(source.includes('Show ignored items'), false)
   assert.equal(source.includes('Hide ignored items'), false)
   assert.equal(source.includes('ignored-panel'), false)
-})
-
-test('App keeps CrowdStrike severity and description as workflow-specific state and resets on Clear', () => {
-  const source = readFileSync(appPath, 'utf8')
-
-  assert.equal(source.includes('const [crowdStrikeSeverity, setCrowdStrikeSeverity] = useState(CROWDSTRIKE_DEFAULT_SEVERITY)'), true)
-  assert.equal(source.includes('const [crowdStrikeDescription, setCrowdStrikeDescription] = useState(CROWDSTRIKE_DEFAULT_DESCRIPTION)'), true)
-  assert.equal(source.includes('setCrowdStrikeSeverity(CROWDSTRIKE_DEFAULT_SEVERITY)'), true)
-  assert.equal(source.includes('setCrowdStrikeDescription(CROWDSTRIKE_DEFAULT_DESCRIPTION)'), true)
-  assert.equal(source.includes('onSeverityChange={handleCrowdStrikeSeverityChange}'), true)
-  assert.equal(source.includes('onDescriptionChange={setCrowdStrikeDescription}'), true)
 })

@@ -22,7 +22,7 @@ function toGroupElementId(label) {
 }
 
 function IndicatorResults({ indicators }) {
-  const detected = getDetectedIndicators(indicators)
+  const detected = useMemo(() => getDetectedIndicators(indicators), [indicators])
   const groupedIndicators = useMemo(() => groupDetectedIndicatorsByType(detected), [detected])
   const [displayMode, setDisplayMode] = useState(INDICATOR_DISPLAY_MODE.REFANGED)
   const [expandedGroups, setExpandedGroups] = useState(() => getInitialExpandedGroups(groupedIndicators))

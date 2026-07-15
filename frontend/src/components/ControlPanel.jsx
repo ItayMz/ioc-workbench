@@ -19,14 +19,22 @@ function ControlPanel({
   onProcess,
   onUpload,
   onExport,
+  onSecondaryExport,
   onClear,
   exportButtonLabel,
   exportDisabled,
-  crowdStrikeConfigSection,
+  secondaryExportButtonLabel,
+  secondaryExportDisabled,
   hasAccumulatedResult,
   backendConnected,
   backendActionsDisabled,
   showDefenderControls,
+  crowdStrikeSeverity,
+  crowdStrikeDescription,
+  onCrowdStrikeSeverityChange,
+  onCrowdStrikeDescriptionChange,
+  onCrowdStrikeExport,
+  crowdStrikeExportDisabled,
   clearVersion,
 }) {
   const uploadRef = useRef(null)
@@ -105,18 +113,26 @@ function ControlPanel({
         />
       </div>
 
-      <div className="control-row">
-        <label className="field-label" htmlFor="workflowModeSelect">Workflow</label>
-        <select
-          id="workflowModeSelect"
-          className="lookback-select"
-          value={workflowMode}
-          onChange={(event) => onWorkflowModeChange(event.target.value)}
-          disabled={loading}
-        >
-          <option value={WORKFLOW_MODE.DEFENDER}>Microsoft Defender</option>
-          <option value={WORKFLOW_MODE.CROWDSTRIKE}>CrowdStrike</option>
-        </select>
+      <div className="control-row control-row-column">
+        <label className="field-label">Workflow</label>
+        <div className="workflow-selector" role="tablist" aria-label="Workflow selector">
+          <button
+            type="button"
+            className={`workflow-badge-button${workflowMode === WORKFLOW_MODE.DEFENDER ? ' active' : ''}`}
+            onClick={() => onWorkflowModeChange(WORKFLOW_MODE.DEFENDER)}
+            disabled={loading}
+          >
+            Microsoft Defender
+          </button>
+          <button
+            type="button"
+            className={`workflow-badge-button${workflowMode === WORKFLOW_MODE.CROWDSTRIKE ? ' active' : ''}`}
+            onClick={() => onWorkflowModeChange(WORKFLOW_MODE.CROWDSTRIKE)}
+            disabled={loading}
+          >
+            CrowdStrike
+          </button>
+        </div>
       </div>
 
       {showDefenderControls && (
@@ -155,7 +171,35 @@ function ControlPanel({
         </div>
       )}
 
-      {crowdStrikeConfigSection}
+      {!showDefenderControls && (
+        <>
+          <div className="control-row">
+            <label className="field-label" htmlFor="crowdstrikeSeverity">Severity</label>
+            <select
+              id="crowdstrikeSeverity"
+              className="lookback-select"
+              value={crowdStrikeSeverity}
+              onChange={(event) => onCrowdStrikeSeverityChange(event.target.value)}
+              disabled={loading}
+            >
+              <option value="high">high</option>
+              <option value="medium">medium</option>
+            </select>
+          </div>
+
+          <div className="control-row control-row-column">
+            <label className="field-label" htmlFor="crowdstrikeDescription">Description</label>
+            <textarea
+              id="crowdstrikeDescription"
+              className="ioc-textarea crowdstrike-description"
+              value={crowdStrikeDescription}
+              onChange={(event) => onCrowdStrikeDescriptionChange(event.target.value)}
+              placeholder="Optional description applied to every exported row"
+              disabled={loading}
+            />
+          </div>
+        </>
+      )}
 
       <div className="button-row">
         <button className="primary" type="button" onClick={onProcess} disabled={backendActionsDisabled}>
@@ -164,9 +208,21 @@ function ControlPanel({
         <button type="button" onClick={() => uploadRef.current?.click()} disabled={backendActionsDisabled}>
           {hasAccumulatedResult ? 'Add Files to Current Export' : 'Upload CSV/TXT/XLSX Files'}
         </button>
-        <button type="button" onClick={onExport} disabled={exportDisabled}>
-          {exportButtonLabel}
-        </button>
+        {showDefenderControls && (
+          <button type="button" onClick={onExport} disabled={exportDisabled}>
+            {exportButtonLabel}
+          </button>
+        )}
+        {!showDefenderControls && (
+          <button type="button" onClick={onCrowdStrikeExport} disabled={crowdStrikeExportDisabled}>
+            Export CrowdStrike CSV
+          </button>
+        )}
+        {!showDefenderControls && (
+          <button type="button" onClick={onSecondaryExport} disabled={secondaryExportDisabled}>
+            {secondaryExportButtonLabel}
+          </button>
+        )}
         <button type="button" className="button-clear" onClick={onClear} disabled={loading}>
           Clear
         </button>

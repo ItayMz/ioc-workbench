@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import ControlPanel from './components/ControlPanel'
-import CrowdStrikeBlockingExport from './components/CrowdStrikeBlockingExport'
 import CrowdStrikeResults from './components/CrowdStrikeResults'
 import ErrorBanner from './components/ErrorBanner'
+import ExportSummaryCards from './components/ExportSummaryCards'
 import IndicatorResults from './components/IndicatorResults'
 import KqlCards from './components/KqlCards'
 import SenderEmailInfoCard from './components/SenderEmailInfoCard'
 import SummaryCards from './components/SummaryCards'
+import ToastMessage from './components/ToastMessage'
 import {
   BACKEND_CONNECTION_STATES,
   getBackendStatusContent,
@@ -46,8 +47,27 @@ import {
   getCrowdStrikeBlockingEligibleCount,
   normalizeCrowdStrikeSeverity,
 } from './services/crowdstrikeBlockingExport.js'
+import { exportQradarCsv, getQradarEligibleCount } from './services/qradarExport.js'
 import './styles/theme.css'
 import './styles/app.css'
+
+const TOAST_HIDE_MS = 2200
+
+function getValidDetectedCount(parseData) {
+  if (typeof parseData?.valid_count === 'number') {
+    return parseData.valid_count
+  }
+
+  if (typeof parseData?.summary?.valid === 'number') {
+    return parseData.summary.valid
+  }
+
+  if (typeof parseData?.summary?.valid_count === 'number') {
+    return parseData.summary.valid_count
+  }
+
+  return (parseData?.indicators || []).filter((indicator) => indicator?.valid).length
+}
 
 function App() {
   const [rawText, setRawText] = useState(getInitialRawText())
@@ -69,9 +89,16 @@ function App() {
   const [workflowMode, setWorkflowMode] = useState(WORKFLOW_MODE.DEFENDER)
   const [crowdStrikeSeverity, setCrowdStrikeSeverity] = useState(CROWDSTRIKE_DEFAULT_SEVERITY)
   const [crowdStrikeDescription, setCrowdStrikeDescription] = useState(CROWDSTRIKE_DEFAULT_DESCRIPTION)
+  const [toast, setToast] = useState(null)
+  const [exportSummaries, setExportSummaries] = useState({
+    defender: null,
+    crowdstrike: null,
+    qradar: null,
+  })
   const isMountedRef = useRef(true)
   const connectedHideTimerRef = useRef(null)
   const lookbackRefreshInFlightRef = useRef(false)
+  const toastHideTimerRef = useRef(null)
 
   const exportState = resolveExportRequest({
     lastSuccessfulParsePayload,
@@ -85,8 +112,15 @@ function App() {
   const showSenderEmailInfoCard = senderEmailAddresses.length > 0
   const workflowPresentation = getWorkflowPresentation(workflowMode)
   const crowdStrikeCampaignName = campaignName || detectedCampaignName || ''
-  const crowdStrikeEligibleCount = getCrowdStrikeBlockingEligibleCount(parseResult?.indicators)
-  const canCrowdStrikeExport = crowdStrikeEligibleCount > 0
+  const crowdStrikeBlockingEligibleCount = getCrowdStrikeBlockingEligibleCount(parseResult?.indicators)
+  const qradarEligibleCount = getQradarEligibleCount(parseResult?.indicators)
+  const crowdStrikeExportDisabled = loading || crowdStrikeBlockingEligibleCount === 0
+  const qradarExportDisabled = loading || qradarEligibleCount === 0
+  const exportSummaryEntries = [
+    exportSummaries.defender,
+    exportSummaries.crowdstrike,
+    exportSummaries.qradar,
+  ].filter(Boolean)
 
   const onBackendStateChange = (nextState) => {
     if (!isMountedRef.current) {
@@ -119,6 +153,17 @@ function App() {
     onStateChange: onBackendStateChange,
   })
 
+  const showSuccessToast = (message) => {
+    if (toastHideTimerRef.current) {
+      clearTimeout(toastHideTimerRef.current)
+    }
+
+    setToast({ tone: 'success', message })
+    toastHideTimerRef.current = setTimeout(() => {
+      setToast(null)
+    }, TOAST_HIDE_MS)
+  }
+
   useEffect(() => {
     isMountedRef.current = true
     runHealthCheck()
@@ -127,6 +172,9 @@ function App() {
       isMountedRef.current = false
       if (connectedHideTimerRef.current) {
         clearTimeout(connectedHideTimerRef.current)
+      }
+      if (toastHideTimerRef.current) {
+        clearTimeout(toastHideTimerRef.current)
       }
     }
   }, [])
@@ -251,7 +299,7 @@ function App() {
     }
   }
 
-  const handleExport = async () => {
+  const handleDefenderExport = async () => {
     if (!isBackendConnected(backendConnectionState)) {
       setErrorMessage('Backend is currently unavailable. Please try again shortly.')
       return
@@ -267,15 +315,76 @@ function App() {
     setErrorMessage('')
 
     try {
-      await exportDefenderCsv({
+      const exported = await exportDefenderCsv({
         ...payload,
         defaultCategory: normalizeDefaultCategory(defaultCategory),
       })
+
+      const count = getValidDetectedCount(parseResult)
+      setExportSummaries((current) => ({
+        ...current,
+        defender: {
+          type: 'defender',
+          title: 'Microsoft Defender IOC CSV',
+          count,
+          countLabel: 'indicators exported',
+          filename: exported.filename,
+        },
+      }))
+      showSuccessToast('✓ Defender CSV exported')
     } catch (error) {
       setErrorMessage(error.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCrowdStrikeExport = () => {
+    const exported = exportCrowdStrikeBlockingCsv(parseResult?.indicators, {
+      severity: crowdStrikeSeverity,
+      description: crowdStrikeDescription,
+      campaignName: crowdStrikeCampaignName,
+    })
+
+    if (!exported) {
+      setErrorMessage('No blockable IOCs detected.')
+      return
+    }
+
+    setExportSummaries((current) => ({
+      ...current,
+      crowdstrike: {
+        type: 'crowdstrike',
+        title: 'CrowdStrike Blocking CSV',
+        count: exported.count,
+        countLabel: 'indicators exported',
+        filename: exported.filename,
+      },
+    }))
+    showSuccessToast('✓ CrowdStrike CSV exported')
+  }
+
+  const handleQradarExport = () => {
+    const exported = exportQradarCsv(parseResult?.indicators, {
+      campaignName: crowdStrikeCampaignName,
+    })
+
+    if (!exported) {
+      setErrorMessage('No IPv4 indicators are available for QRadar export.')
+      return
+    }
+
+    setExportSummaries((current) => ({
+      ...current,
+      qradar: {
+        type: 'qradar',
+        title: 'QRadar CSV',
+        count: exported.count,
+        countLabel: 'IP addresses exported',
+        filename: exported.filename,
+      },
+    }))
+    showSuccessToast('✓ QRadar CSV exported')
   }
 
   const handleClear = () => {
@@ -295,19 +404,13 @@ function App() {
     setCrowdStrikeSeverity(CROWDSTRIKE_DEFAULT_SEVERITY)
     setCrowdStrikeDescription(CROWDSTRIKE_DEFAULT_DESCRIPTION)
     setWorkflowMode(WORKFLOW_MODE.DEFENDER)
-    setClearVersion((current) => current + 1)
-  }
-
-  const handleCrowdStrikeExport = () => {
-    const exported = exportCrowdStrikeBlockingCsv(parseResult?.indicators, {
-      severity: crowdStrikeSeverity,
-      description: crowdStrikeDescription,
-      campaignName: crowdStrikeCampaignName,
+    setExportSummaries({
+      defender: null,
+      crowdstrike: null,
+      qradar: null,
     })
-
-    if (!exported) {
-      setErrorMessage('No IPv4, MD5, or SHA256 indicators are available for CrowdStrike blocking export.')
-    }
+    setToast(null)
+    setClearVersion((current) => current + 1)
   }
 
   const handleCrowdStrikeSeverityChange = (nextSeverity) => {
@@ -359,17 +462,7 @@ function App() {
     }
   }
 
-  const activeExportLabel = workflowPresentation.isDefender
-    ? 'Export Defender CSV'
-    : 'Export CrowdStrike CSV'
-
-  const activeExportHandler = workflowPresentation.isDefender
-    ? handleExport
-    : handleCrowdStrikeExport
-
-  const activeExportDisabled = workflowPresentation.isDefender
-    ? backendActionsDisabled || !exportState.canExport
-    : loading || !canCrowdStrikeExport
+  const defenderExportDisabled = backendActionsDisabled || !exportState.canExport
 
   return (
     <div className="app-shell">
@@ -410,23 +503,23 @@ function App() {
         onWorkflowModeChange={setWorkflowMode}
         onProcess={handleProcess}
         onUpload={handleUpload}
-        onExport={activeExportHandler}
+        onExport={handleDefenderExport}
+        onSecondaryExport={handleQradarExport}
         onClear={handleClear}
-        exportButtonLabel={activeExportLabel}
-        exportDisabled={activeExportDisabled}
-        crowdStrikeConfigSection={!workflowPresentation.isDefender ? (
-          <CrowdStrikeBlockingExport
-            indicators={parseResult?.indicators}
-            severity={crowdStrikeSeverity}
-            description={crowdStrikeDescription}
-            onSeverityChange={handleCrowdStrikeSeverityChange}
-            onDescriptionChange={setCrowdStrikeDescription}
-          />
-        ) : null}
+        exportButtonLabel="Export Defender CSV"
+        exportDisabled={defenderExportDisabled}
+        secondaryExportButtonLabel="Export QRadar CSV"
+        secondaryExportDisabled={qradarExportDisabled}
         hasAccumulatedResult={Boolean(lastSuccessfulParseResult)}
         backendConnected={isBackendConnected(backendConnectionState)}
         backendActionsDisabled={backendActionsDisabled}
         showDefenderControls={workflowPresentation.isDefender}
+        crowdStrikeSeverity={crowdStrikeSeverity}
+        crowdStrikeDescription={crowdStrikeDescription}
+        onCrowdStrikeSeverityChange={handleCrowdStrikeSeverityChange}
+        onCrowdStrikeDescriptionChange={setCrowdStrikeDescription}
+        onCrowdStrikeExport={handleCrowdStrikeExport}
+        crowdStrikeExportDisabled={crowdStrikeExportDisabled}
         clearVersion={clearVersion}
       />
 
@@ -446,21 +539,43 @@ function App() {
 
       {parseResult && !loading && (
         <>
-          <SummaryCards summary={parseResult.summary} />
-          {showSenderEmailInfoCard && (
-            <SenderEmailInfoCard
-              emailAddresses={senderEmailAddresses}
-              message={workflowPresentation.senderGuidanceMessage}
-            />
-          )}
-          <IndicatorResults indicators={parseResult.indicators} />
+          <SummaryCards
+            summary={parseResult.summary}
+            exportEligibility={!workflowPresentation.isDefender ? {
+              crowdStrikeBlockingEligible: crowdStrikeBlockingEligibleCount,
+              qradarEligibleIps: qradarEligibleCount,
+            } : null}
+          />
+          {workflowPresentation.isDefender && <IndicatorResults indicators={parseResult.indicators} />}
           {workflowPresentation.isDefender ? (
-            <KqlCards queries={parseResult.kqlQueries} />
+            <>
+              <KqlCards queries={parseResult.kqlQueries} />
+              {showSenderEmailInfoCard && (
+                <SenderEmailInfoCard
+                  emailAddresses={senderEmailAddresses}
+                  message={workflowPresentation.senderGuidanceMessage}
+                />
+              )}
+            </>
           ) : (
-            <CrowdStrikeResults indicators={parseResult.indicators} />
+            <>
+              <CrowdStrikeResults
+                indicators={parseResult.indicators}
+                onQueryCopied={() => showSuccessToast('✓ Query copied')}
+              />
+              {showSenderEmailInfoCard && (
+                <SenderEmailInfoCard
+                  emailAddresses={senderEmailAddresses}
+                  message={workflowPresentation.senderGuidanceMessage}
+                />
+              )}
+            </>
           )}
+          {exportSummaryEntries.length > 0 && <ExportSummaryCards summaries={exportSummaryEntries} />}
         </>
       )}
+
+      <ToastMessage toast={toast} />
     </div>
   )
 }

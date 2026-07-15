@@ -1,6 +1,6 @@
 import { buildDetectionSummary } from '../services/summaryPresentation.js'
 
-function SummaryCards({ summary }) {
+function SummaryCards({ summary, exportEligibility = null }) {
   const detectionSummary = buildDetectionSummary(summary)
   if (!detectionSummary) {
     return null
@@ -35,6 +35,27 @@ function SummaryCards({ summary }) {
           </p>
         ))}
       </div>
+
+      {exportEligibility && (
+        <>
+          <div className="section-header summary-subsection-header">
+            <h2>Export Eligibility</h2>
+          </div>
+          <div className="summary-grid">
+            <article className="summary-item">
+              <p>CrowdStrike Blocking Eligible</p>
+              <strong>{exportEligibility.crowdStrikeBlockingEligible}</strong>
+            </article>
+            <article className="summary-item">
+              <p>QRadar Eligible IPs</p>
+              <strong>{exportEligibility.qradarEligibleIps}</strong>
+            </article>
+          </div>
+          <p className="muted summary-note">
+            Only IPv4, MD5, and SHA256 indicators are eligible for CrowdStrike blocking. All other indicators are included in the Advanced Event Search query only.
+          </p>
+        </>
+      )}
     </section>
   )
 }

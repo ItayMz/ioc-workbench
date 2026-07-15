@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 const COPY_RESET_MS = 1800
 
-function CrowdStrikeQueryCard({ queryData }) {
+function CrowdStrikeQueryCard({ queryData, onCopySuccess }) {
   const [copied, setCopied] = useState(false)
   const resetTimerRef = useRef(null)
 
@@ -16,6 +16,7 @@ function CrowdStrikeQueryCard({ queryData }) {
     try {
       await navigator.clipboard.writeText(queryData.query)
       setCopied(true)
+      onCopySuccess?.()
 
       if (resetTimerRef.current) {
         clearTimeout(resetTimerRef.current)

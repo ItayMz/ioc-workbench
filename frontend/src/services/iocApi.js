@@ -1,6 +1,10 @@
 import { parseUploadedFiles, resolveCampaignName } from './uploadParser.js'
+import { downloadCsvContent } from './downloadFile.js'
+import { buildCampaignExportFilename } from './exportNaming.js'
 
 const API_BASE_URL = (import.meta.env && import.meta.env.VITE_API_BASE_URL) || 'http://localhost:8000'
+const DEFENDER_FILENAME_SUFFIX = 'defender.csv'
+const DEFENDER_FILENAME_FALLBACK = 'defender-iocs.csv'
 
 async function parseJsonResponse(response) {
   let payload = null
@@ -118,13 +122,10 @@ export async function exportDefenderCsv({ rawText, lookbackDays, campaignName = 
   }
 
   const csvContent = await response.text()
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = 'defender_iocs.csv'
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
+  const filename = buildCampaignExportFilename(resolvedCampaignName, DEFENDER_FILENAME_SUFFIX, DEFENDER_FILENAME_FALLBACK)
+  downloadCsvContent(csvContent, filename)
+
+  return {
+    filename,
+  }
 }

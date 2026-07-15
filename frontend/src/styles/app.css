@@ -102,8 +102,12 @@ h2 {
 
 .button-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.6rem;
+}
+
+.button-row > button {
+  white-space: nowrap;
 }
 
 button {
@@ -246,6 +250,14 @@ button:disabled {
   color: var(--text);
 }
 
+.summary-subsection-header {
+  margin-top: 0.85rem;
+}
+
+.summary-note {
+  margin-top: 0.7rem;
+}
+
 .detection-summary {
   animation: summary-fade-in 220ms ease-out;
 }
@@ -327,11 +339,24 @@ button:disabled {
   margin-top: 0.7rem;
 }
 
-.workflow-placeholder-card {
-  animation: summary-fade-in 220ms ease-out;
+.workflow-selector {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
-.crowdstrike-export-card {
+.workflow-badge-button {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(11, 24, 46, 0.78);
+}
+
+.workflow-badge-button.active {
+  border-color: rgba(59, 130, 246, 0.7);
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.52) 0%, rgba(30, 64, 175, 0.62) 100%);
+  color: #eaf2ff;
+}
+
+.workflow-placeholder-card {
   animation: summary-fade-in 220ms ease-out;
 }
 
@@ -548,8 +573,14 @@ button:disabled {
 .indicator-empty-state {
   margin: 0.25rem 0 0;
 }
-.crowdstrike-export-empty-message {
-  margin-top: 0.4rem;
+.export-summary-card {
+  animation: summary-fade-in 220ms ease-out;
+}
+
+.export-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.65rem;
 }
 
 .kql-grid {
@@ -640,5 +671,9 @@ button:disabled {
 
   .copy-all-button {
     margin-left: 0;
+  }
+
+  .button-row {
+    flex-wrap: wrap;
   }
 }

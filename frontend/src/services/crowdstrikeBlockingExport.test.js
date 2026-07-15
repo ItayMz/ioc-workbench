@@ -10,6 +10,7 @@ import {
   CROWDSTRIKE_BLOCKING_FIXED_PLATFORMS,
   CROWDSTRIKE_DEFAULT_DESCRIPTION,
   CROWDSTRIKE_DEFAULT_SEVERITY,
+  exportCrowdStrikeBlockingCsv,
   getCrowdStrikeBlockingEligibleCount,
   getCrowdStrikeBlockingRows,
   getCrowdStrikeTotalDetectedCount,
@@ -22,6 +23,65 @@ function indicator(indicatorType, refangedValue, valid = true, originalValue = n
     refanged_value: refangedValue,
     original_value: originalValue ?? refangedValue,
     valid,
+  }
+}
+
+function withDownloadMocks(runAssertions) {
+  const originalBlob = globalThis.Blob
+  const originalUrl = globalThis.URL
+  const originalDocument = globalThis.document
+
+  let capturedParts = null
+  let capturedType = null
+
+  class MockBlob {
+    constructor(parts, options) {
+      capturedParts = parts
+      capturedType = options?.type
+    }
+  }
+
+  const anchor = {
+    href: '',
+    download: '',
+    clickCalled: false,
+    click() {
+      this.clickCalled = true
+    },
+  }
+
+  globalThis.Blob = MockBlob
+  globalThis.URL = {
+    createObjectURL() {
+      return 'blob:mock-url'
+    },
+    revokeObjectURL() {},
+  }
+  globalThis.document = {
+    createElement(tagName) {
+      assert.equal(tagName, 'a')
+      return anchor
+    },
+    body: {
+      appendChild(node) {
+        assert.equal(node, anchor)
+      },
+      removeChild(node) {
+        assert.equal(node, anchor)
+      },
+    },
+  }
+
+  try {
+    runAssertions(() => ({
+      payload: String(capturedParts?.[0] ?? ''),
+      mimeType: capturedType,
+      clicked: anchor.clickCalled,
+    }))
+  } finally {
+    globalThis.Blob = originalBlob
+    globalThis.URL = originalUrl
+    globalThis.document = originalDocument
   }
 }
 
@@ -206,4 +266,65 @@ test('formula-injection sensitive description values are neutralized', () => {
 
 test('exports the exact supported blocking IOC type order contract', () => {
   assert.deepEqual(CROWDSTRIKE_BLOCKING_EXPORT_TYPE_ORDER, ['sha256', 'md5', 'ipv4'])
+})
+
+test('CrowdStrike CSV export starts with one UTF-8 BOM and header follows immediately', () => {
+  withDownloadMocks((getResult) => {
+    const exported = exportCrowdStrikeBlockingCsv([
+      indicator('FileSha256', 'a'.repeat(64)),
+    ], {
+      severity: 'high',
+      description: CROWDSTRIKE_DEFAULT_DESCRIPTION,
+      campaignName: 'Q3 Campaign',
+    })
+
+    const result = getResult()
+    const expectedHeader = CROWDSTRIKE_BLOCKING_CSV_COLUMNS.join(',')
+
+    assert.equal(exported.filename, 'Q3-Campaign-crowdstrike-iocs.csv')
+    assert.equal(exported.count, 1)
+    assert.equal(result.mimeType, 'text/csv;charset=utf-8')
+    assert.equal(result.clicked, true)
+    assert.equal(result.payload.startsWith('\uFEFF'), true)
+    assert.equal(result.payload.startsWith('\uFEFF\uFEFF'), false)
+    assert.equal(result.payload.startsWith(`\uFEFF${expectedHeader}\n`), true)
+    assert.equal(result.payload.slice(1).includes('\uFEFF'), false)
+  })
+})
+
+test('CrowdStrike CSV export preserves Hebrew description exactly after BOM', () => {
+  withDownloadMocks((getResult) => {
+    const hebrewDescription = 'מזהים 15/7/2026'
+
+    exportCrowdStrikeBlockingCsv([
+      indicator('FileMd5', 'a'.repeat(32)),
+    ], {
+      severity: 'high',
+      description: hebrewDescription,
+      campaignName: 'Hebrew Campaign',
+    })
+
+    const result = getResult()
+    assert.equal(result.payload.includes(`,${hebrewDescription},`), true)
+    assert.equal(result.payload.startsWith(`\uFEFF${CROWDSTRIKE_BLOCKING_CSV_COLUMNS.join(',')}\n`), true)
+  })
+})
+
+test('CrowdStrike CSV export preserves mixed-language description exactly after BOM', () => {
+  withDownloadMocks((getResult) => {
+    const mixedDescription = 'Customer indicators - מזהים 15/7/2026'
+
+    exportCrowdStrikeBlockingCsv([
+      indicator('IpAddress', '10.0.0.1'),
+    ], {
+      severity: 'medium',
+      description: mixedDescription,
+      campaignName: 'Mixed Campaign',
+    })
+
+    const result = getResult()
+    assert.equal(result.payload.includes(`,${mixedDescription},`), true)
+    assert.equal(result.payload.startsWith('\uFEFF'), true)
+    assert.equal(result.payload.slice(1).includes('\uFEFF'), false)
+  })
 })

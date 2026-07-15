@@ -1,3 +1,6 @@
+import { downloadCsvContent } from './downloadFile.js'
+import { buildCampaignExportFilename } from './exportNaming.js'
+
 export const CROWDSTRIKE_BLOCKING_CSV_COLUMNS = [
   'type',
   'value',
@@ -13,6 +16,8 @@ export const CROWDSTRIKE_BLOCKING_FIXED_PLATFORMS = 'windows,mac,linux'
 export const CROWDSTRIKE_BLOCKING_FIXED_APPLIED_GLOBALLY = 'TRUE'
 export const CROWDSTRIKE_DEFAULT_SEVERITY = 'high'
 export const CROWDSTRIKE_DEFAULT_DESCRIPTION = 'Sent by the customer via email'
+const CROWDSTRIKE_FILENAME_SUFFIX = 'crowdstrike-iocs.csv'
+const CROWDSTRIKE_FILENAME_FALLBACK = 'crowdstrike-iocs.csv'
 
 const SEVERITY_VALUES = new Set(['high', 'medium'])
 
@@ -83,17 +88,6 @@ function buildCsv(rows) {
   const body = rows.map((row) => CROWDSTRIKE_BLOCKING_CSV_COLUMNS.map((column) => csvEscape(row[column])).join(','))
 
   return [header, ...body].join('\n')
-}
-
-function sanitizeCampaignName(name) {
-  const normalized = String(name || '')
-    .trim()
-    .replace(/[\\/:*?"<>|\x00-\x1f]/g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^[-. ]+|[-. ]+$/g, '')
-
-  return normalized
 }
 
 export function normalizeCrowdStrikeSeverity(value) {
@@ -175,29 +169,20 @@ export function buildCrowdStrikeBlockingCsv(indicators, { severity, description 
 }
 
 export function buildCrowdStrikeExportFilename(campaignName) {
-  const sanitized = sanitizeCampaignName(campaignName)
-  if (!sanitized) {
-    return 'crowdstrike-iocs.csv'
-  }
-
-  return `${sanitized}-crowdstrike-iocs.csv`
+  return buildCampaignExportFilename(campaignName, CROWDSTRIKE_FILENAME_SUFFIX, CROWDSTRIKE_FILENAME_FALLBACK)
 }
 
 export function exportCrowdStrikeBlockingCsv(indicators, { severity, description, campaignName } = {}) {
   const exportData = buildCrowdStrikeBlockingCsv(indicators, { severity, description })
   if (!exportData) {
-    return false
+    return null
   }
 
   const filename = buildCrowdStrikeExportFilename(campaignName)
-  const blob = new Blob([exportData.csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
-  return true
+  downloadCsvContent(exportData.csv, filename, { includeUtf8Bom: true })
+
+  return {
+    filename,
+    count: exportData.rows.length,
+  }
 }
