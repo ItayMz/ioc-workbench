@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 
 const indicatorResultsPath = resolve(process.cwd(), 'src/components/IndicatorResults.jsx')
 const kqlCardsPath = resolve(process.cwd(), 'src/components/KqlCards.jsx')
+const senderEmailInfoCardPath = resolve(process.cwd(), 'src/components/SenderEmailInfoCard.jsx')
 const appStylesPath = resolve(process.cwd(), 'src/styles/app.css')
 
 test('Detected Indicators controls keep expected wrapper classes for aligned toggle and Copy All layout', () => {
@@ -40,4 +41,13 @@ test('KQL copy flow does not use alert and keeps per-card copied state keyed by 
   assert.equal(source.includes('[cardKey]: true'), true)
   assert.equal(source.includes('[cardKey]: false'), true)
   assert.equal(source.includes('catch {'), true)
+})
+
+test('sender email workflow card includes required title, guidance, and Copy Emails button', () => {
+  const source = readFileSync(senderEmailInfoCardPath, 'utf8')
+
+  assert.equal(source.includes('Sender Email Addresses Detected'), true)
+  assert.equal(source.includes('Copy Emails'), true)
+  assert.equal(source.includes('Email &amp; Collaboration'), true)
+  assert.equal(source.includes('sender-email-info-card sender-email-info-card-info'), true)
 })

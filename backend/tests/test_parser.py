@@ -59,18 +59,21 @@ def test_non_hash_indicators_get_block_action_and_invalid_have_none():
     assert url_ioc.action is Action.BLOCK
     assert ip_ioc.action is Action.BLOCK
     assert domain_ioc.action is Action.BLOCK
-    assert email_ioc.action is Action.BLOCK
+    assert email_ioc.action is None
     assert invalid_ioc.action is None
 
 
 def test_valid_indicators_get_malware_category_and_alerts():
     url_ioc = parse_ioc("https://example.com")
     hash_ioc = parse_ioc("0123456789abcdef0123456789abcdef")
+    email_ioc = parse_ioc("user@example.com")
 
     assert url_ioc.category is Category.MALWARE
     assert url_ioc.generate_alert is True
     assert hash_ioc.category is Category.MALWARE
     assert hash_ioc.generate_alert is True
+    assert email_ioc.category is None
+    assert email_ioc.generate_alert is None
 
 
 def test_invalid_indicators_have_no_category_or_alerts():
@@ -83,11 +86,14 @@ def test_invalid_indicators_have_no_category_or_alerts():
 def test_valid_indicators_get_severity_and_expiration_defaults():
     url_ioc = parse_ioc("https://example.com")
     hash_ioc = parse_ioc("0123456789abcdef0123456789abcdef")
+    email_ioc = parse_ioc("user@example.com")
 
     assert url_ioc.severity == "High"
     assert url_ioc.expiration_time == "2099-12-31T23:59:59.0Z"
     assert hash_ioc.severity == "High"
     assert hash_ioc.expiration_time == "2099-12-31T23:59:59.0Z"
+    assert email_ioc.severity is None
+    assert email_ioc.expiration_time is None
 
 
 def test_invalid_indicators_have_no_severity_or_expiration_defaults():
@@ -109,11 +115,15 @@ def test_parse_bulk_text_trims_whitespace_and_ignores_blank_lines():
     assert [indicator.indicator_type for indicator in indicators] == [IndicatorType.URL, IndicatorType.IP_ADDRESS]
 
 
-def test_parse_bulk_text_ignores_email_addresses_completely():
+def test_parse_bulk_text_includes_email_addresses_as_valid_indicators():
     indicators = parse_bulk_text("user@test.com\n1.1.1.1\nevil.com")
 
-    assert [indicator.refanged_value for indicator in indicators] == ["1.1.1.1", "evil.com"]
-    assert [indicator.indicator_type for indicator in indicators] == [IndicatorType.IP_ADDRESS, IndicatorType.DOMAIN_NAME]
+    assert [indicator.refanged_value for indicator in indicators] == ["user@test.com", "1.1.1.1", "evil.com"]
+    assert [indicator.indicator_type for indicator in indicators] == [
+        IndicatorType.SENDER_EMAIL_ADDRESS,
+        IndicatorType.IP_ADDRESS,
+        IndicatorType.DOMAIN_NAME,
+    ]
 
 
 def test_parse_ioc_rejects_extremely_long_input_without_crashing():

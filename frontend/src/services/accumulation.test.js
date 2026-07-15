@@ -176,7 +176,7 @@ test('global deduplication handles refanged duplicates across submissions', () =
   assert.equal(merged.rawText, '8.8.8.8\nevil[.]com')
 })
 
-test('emails are ignored during accumulation merge', () => {
+test('sender emails are preserved and deduplicated during accumulation merge', () => {
   const merged = mergeAccumulatedSubmission({
     currentPayload: {
       rawText: 'user@test.com\n8.8.8.8',
@@ -186,6 +186,7 @@ test('emails are ignored during accumulation merge', () => {
       iocMetadata: null,
     },
     currentResult: buildResult([
+      ioc('user@test.com', 'user@test.com', 'SenderEmailAddress'),
       ioc('8.8.8.8', '8.8.8.8', 'IpAddress'),
     ]),
     incomingPayload: {
@@ -196,11 +197,13 @@ test('emails are ignored during accumulation merge', () => {
       iocMetadata: null,
     },
     incomingResult: buildResult([
+      ioc('USER@TEST.COM', 'USER@TEST.COM', 'SenderEmailAddress'),
+      ioc('analyst@test.com', 'analyst@test.com', 'SenderEmailAddress'),
       ioc('evil.com', 'evil.com', 'DomainName'),
     ]),
   })
 
-  assert.equal(merged.rawText, '8.8.8.8\nevil.com')
+  assert.equal(merged.rawText, 'user@test.com\n8.8.8.8\nanalyst@test.com\nevil.com')
 })
 
 test('duplicate IOC metadata keeps first accepted occurrence', () => {
@@ -240,7 +243,7 @@ test('duplicate IOC metadata keeps first accepted occurrence', () => {
   })
 })
 
-test('incoming empty/ignored batch keeps accumulated payload unchanged', () => {
+test('incoming sender-email-only batch is accumulated like other valid indicators', () => {
   const merged = mergeAccumulatedSubmission({
     currentPayload: {
       rawText: '8.8.8.8\nevil.com',
@@ -262,9 +265,12 @@ test('incoming empty/ignored batch keeps accumulated payload unchanged', () => {
       defaultCategory: 'Malware',
       iocMetadata: null,
     },
-    incomingResult: buildResult([]),
+    incomingResult: buildResult([
+      ioc('user@test.com', 'user@test.com', 'SenderEmailAddress'),
+      ioc('analyst@test.com', 'analyst@test.com', 'SenderEmailAddress'),
+    ]),
   })
 
-  assert.equal(merged.rawText, '8.8.8.8\nevil.com')
+  assert.equal(merged.rawText, '8.8.8.8\nevil.com\nuser@test.com\nanalyst@test.com')
   assert.equal(merged.iocMetadata.length, 1)
 })

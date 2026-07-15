@@ -4,6 +4,7 @@ from enum import Enum
 from io import StringIO
 
 from app.enums.category import Category
+from app.enums.indicator_type import IndicatorType
 from app.models.campaign import Campaign
 from app.services.parser import parse_ioc
 
@@ -154,6 +155,8 @@ def export_campaign_to_csv_bytes(
 
     for indicator in campaign.indicators:
         if not indicator.valid or indicator.indicator_type is None:
+            continue
+        if indicator.indicator_type is IndicatorType.SENDER_EMAIL_ADDRESS:
             continue
 
         key = (indicator.indicator_type.value, indicator.refanged_value.lower())

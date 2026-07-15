@@ -79,3 +79,32 @@ def test_exporter_writes_hash_action_as_block_and_remediate():
     worksheet = workbook.active
 
     assert worksheet[2][3].value == "BlockAndRemediate"
+
+
+def test_exporter_excludes_sender_email_indicators_from_excel_rows():
+    sender_email = ParsedIOC(
+        original_value="user@example.com",
+        refanged_value="user@example.com",
+        indicator_type=IndicatorType.SENDER_EMAIL_ADDRESS,
+        valid=True,
+    )
+    url_indicator = ParsedIOC(
+        original_value="https://example.com",
+        refanged_value="https://example.com",
+        indicator_type=IndicatorType.URL,
+        action=Action.BLOCK,
+        category=Category.MALWARE,
+        generate_alert=True,
+        severity="High",
+        expiration_time="2099-12-31T23:59:59.0Z",
+        valid=True,
+    )
+    campaign = Campaign(indicators=[sender_email, url_indicator], title="Title", description="Description", recommended_actions="Actions")
+
+    workbook_bytes = export_campaign_to_excel_bytes(campaign)
+    workbook = load_workbook(filename=BytesIO(workbook_bytes))
+    worksheet = workbook.active
+
+    assert worksheet.max_row == 2
+    assert worksheet[2][0].value == "Url"
+    assert worksheet[2][1].value == "https://example.com"

@@ -41,6 +41,7 @@ class ProcessingSummary(BaseModel):
     ipv6: int
     domains: int
     urls: int
+    senderEmailAddresses: int
     duplicatesRemoved: int
     queriesGenerated: int
 
@@ -204,6 +205,11 @@ def _build_processing_summary(
         ipv6=len(grouped_iocs["ipv6"]),
         domains=len(grouped_iocs["domains"]),
         urls=len(grouped_iocs["urls"]),
+        senderEmailAddresses=sum(
+            1
+            for indicator in valid_indicators
+            if indicator.indicator_type is IndicatorType.SENDER_EMAIL_ADDRESS
+        ),
         duplicatesRemoved=duplicates_removed,
         queriesGenerated=queries_generated,
     )

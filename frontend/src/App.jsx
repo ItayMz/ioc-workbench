@@ -3,6 +3,7 @@ import ControlPanel from './components/ControlPanel'
 import ErrorBanner from './components/ErrorBanner'
 import IndicatorResults from './components/IndicatorResults'
 import KqlCards from './components/KqlCards'
+import SenderEmailInfoCard from './components/SenderEmailInfoCard'
 import SummaryCards from './components/SummaryCards'
 import {
   BACKEND_CONNECTION_STATES,
@@ -29,6 +30,9 @@ import {
   LOOKBACK_REFRESH_FAILURE_MESSAGE,
   shouldAttemptLookbackRefresh,
 } from './services/lookbackRefresh.js'
+import {
+  getDetectedSenderEmailAddresses,
+} from './services/senderEmailWorkflow.js'
 import './styles/theme.css'
 import './styles/app.css'
 
@@ -61,6 +65,8 @@ function App() {
   const backendActionsDisabled = shouldDisableBackendActions(backendConnectionState, loading)
   const backendStatusContent = getBackendStatusContent(backendConnectionState)
   const showBackendStatusSpinner = shouldShowBackendSpinner(backendConnectionState)
+  const senderEmailAddresses = getDetectedSenderEmailAddresses(parseResult?.indicators)
+  const showSenderEmailInfoCard = senderEmailAddresses.length > 0
 
   const onBackendStateChange = (nextState) => {
     if (!isMountedRef.current) {
@@ -377,6 +383,7 @@ function App() {
       {parseResult && !loading && (
         <>
           <SummaryCards summary={parseResult.summary} />
+          {showSenderEmailInfoCard && <SenderEmailInfoCard emailAddresses={senderEmailAddresses} />}
           <IndicatorResults indicators={parseResult.indicators} />
           <KqlCards queries={parseResult.kqlQueries} />
         </>

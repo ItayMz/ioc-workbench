@@ -93,10 +93,6 @@ function getValueKey(value) {
   const refangedValue = refang(cleanedValue)
   const indicatorType = classifyType(refangedValue)
 
-  if (indicatorType === 'SenderEmailAddress') {
-    return null
-  }
-
   return `${indicatorType || 'None'}::${refangedValue.toLowerCase()}`
 }
 

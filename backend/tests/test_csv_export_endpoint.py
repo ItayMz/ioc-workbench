@@ -251,6 +251,21 @@ def test_export_csv_endpoint_mixed_source_metadata_excludes_email_rows():
     assert by_value['8.8.8.8'][9] == 'CommandAndControl'
 
 
+def test_export_csv_endpoint_sender_email_only_input_exports_no_data_rows():
+    response = export_campaign_csv(
+        ParseRequest(
+            raw_text='user@test.com analyst@test.com',
+            iocMetadata=[
+                IOCMetadata(value='user@test.com', campaignName='Campaign A', category='Discovery'),
+                IOCMetadata(value='analyst@test.com', campaignName='Campaign A', category='Discovery'),
+            ],
+        )
+    )
+
+    rows = _read_csv_response(response)
+    assert len(rows) == 1
+
+
 def test_export_csv_reference_style_content_excludes_labels_emails_and_port_notes():
     raw_text = "\n".join([
         "HASH",

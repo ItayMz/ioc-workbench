@@ -95,9 +95,6 @@ def parse_iocs(values: list[str]) -> list[ParsedIOC]:
             continue
 
         parsed = parse_ioc(value)
-        if parsed.indicator_type is IndicatorType.SENDER_EMAIL_ADDRESS:
-            continue
-
         indicators.append(parsed)
 
     return _deduplicate_indicators(indicators)
@@ -234,13 +231,14 @@ def parse_ioc(value: str) -> ParsedIOC:
     if valid:
         if indicator_type in {IndicatorType.FILE_MD5, IndicatorType.FILE_SHA1, IndicatorType.FILE_SHA256}:
             action = Action.BLOCK_AND_REMEDIATE
-        else:
+        elif indicator_type is not IndicatorType.SENDER_EMAIL_ADDRESS:
             action = Action.BLOCK
 
-        category = Category.MALWARE
-        generate_alert = True
-        severity = "High"
-        expiration_time = "2099-12-31T23:59:59.0Z"
+        if indicator_type is not IndicatorType.SENDER_EMAIL_ADDRESS:
+            category = Category.MALWARE
+            generate_alert = True
+            severity = "High"
+            expiration_time = "2099-12-31T23:59:59.0Z"
 
     return ParsedIOC(
         original_value=value,

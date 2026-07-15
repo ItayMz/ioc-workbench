@@ -3,6 +3,7 @@ from enum import Enum
 
 from openpyxl import Workbook
 
+from app.enums.indicator_type import IndicatorType
 from app.models.campaign import Campaign
 
 HEADERS = [
@@ -37,6 +38,8 @@ def export_campaign_to_excel_bytes(campaign: Campaign) -> bytes:
 
     for indicator in campaign.indicators:
         if not indicator.valid:
+            continue
+        if indicator.indicator_type is IndicatorType.SENDER_EMAIL_ADDRESS:
             continue
 
         worksheet.append(

@@ -6,6 +6,7 @@ const DETECTION_KEYS = [
   ['IPv6', 'ipv6'],
   ['Domains', 'domains'],
   ['URLs', 'urls'],
+  ['Sender Email Addresses', 'senderEmailAddresses'],
 ]
 
 function toCount(value) {
