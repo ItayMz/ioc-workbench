@@ -100,18 +100,20 @@ function ControlPanel({
         disabled={loading}
       />
 
-      <div className="control-row">
-        <label className="field-label" htmlFor="campaignNameInput">Campaign name</label>
-        <input
-          id="campaignNameInput"
-          className="campaign-input"
-          type="text"
-          value={campaignName}
-          onChange={(event) => onCampaignNameChange(event.target.value)}
-          placeholder="Optional campaign name"
-          disabled={loading}
-        />
-      </div>
+      {showDefenderControls && (
+        <div className="control-row">
+          <label className="field-label" htmlFor="campaignNameInput">Campaign name</label>
+          <input
+            id="campaignNameInput"
+            className="campaign-input"
+            type="text"
+            value={campaignName}
+            onChange={(event) => onCampaignNameChange(event.target.value)}
+            placeholder="Optional campaign name"
+            disabled={loading}
+          />
+        </div>
+      )}
 
       <div className="control-row control-row-column">
         <label className="field-label">Workflow</label>

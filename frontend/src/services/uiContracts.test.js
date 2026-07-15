@@ -79,6 +79,14 @@ test('Control panel keeps workflow export action in main action row for Defender
   assert.equal(source.includes('disabled={exportDisabled}'), true)
 })
 
+test('Control panel renders Campaign name input only in Defender workflow', () => {
+  const source = readFileSync(controlPanelPath, 'utf8')
+
+  assert.equal(source.includes('showDefenderControls && ('), true)
+  assert.equal(source.includes('htmlFor="campaignNameInput"'), true)
+  assert.equal(source.includes('id="campaignNameInput"'), true)
+})
+
 test('Control panel renders CrowdStrike severity and description configuration', () => {
   const source = readFileSync(controlPanelPath, 'utf8')
 
@@ -108,23 +116,35 @@ test('App wires workflow mode and keeps Defender/CrowdStrike outputs isolated', 
   assert.equal(source.includes('<QradarExport'), false)
 })
 
-test('CrowdStrike layout order is detection summary then query then sender card then export summary', () => {
+test('CrowdStrike layout order is export summary then detection summary then query then sender card', () => {
   const source = readFileSync(appPath, 'utf8')
 
+  const parseResultBlockIndex = source.indexOf('{parseResult && !loading && (')
+  const exportSummaryIndex = source.indexOf('<ExportSummaryCards')
   const summaryIndex = source.indexOf('<SummaryCards')
   const crowdStrikeBranchIndex = source.indexOf(') : (')
   const queryIndex = source.indexOf('<CrowdStrikeResults', crowdStrikeBranchIndex)
   const senderIndex = source.indexOf('{showSenderEmailInfoCard && (', queryIndex)
-  const exportSummaryIndex = source.indexOf('<ExportSummaryCards')
 
+  assert.equal(parseResultBlockIndex > -1, true)
+  assert.equal(exportSummaryIndex > -1, true)
   assert.equal(summaryIndex > -1, true)
   assert.equal(crowdStrikeBranchIndex > -1, true)
   assert.equal(queryIndex > -1, true)
   assert.equal(senderIndex > -1, true)
-  assert.equal(exportSummaryIndex > -1, true)
+  assert.equal(exportSummaryIndex < parseResultBlockIndex, true)
+  assert.equal(exportSummaryIndex < summaryIndex, true)
   assert.equal(summaryIndex < queryIndex, true)
   assert.equal(queryIndex < senderIndex, true)
-  assert.equal(senderIndex < exportSummaryIndex, true)
+})
+
+test('Export Summary is rendered once and no longer rendered at parse-result bottom location', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  const exportSummaryOccurrences = source.match(/<ExportSummaryCards/g) || []
+
+  assert.equal(exportSummaryOccurrences.length, 1)
+  assert.equal(source.includes('{exportSummaryEntries.length > 0 && <ExportSummaryCards summaries={exportSummaryEntries} />}'), true)
 })
 
 test('CrowdStrike query card includes required title description metadata and Copy Query button', () => {
@@ -205,6 +225,14 @@ test('App preserves existing export handlers while moving CrowdStrike controls t
   assert.equal(source.includes('const handleQradarExport = () => {'), true)
   assert.equal(source.includes('exportCrowdStrikeBlockingCsv'), true)
   assert.equal(source.includes('exportQradarCsv'), true)
+})
+
+test('App preserves Campaign Name state across workflow switching', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('const [campaignName, setCampaignName] = useState(\'\')'), true)
+  assert.equal(source.includes('onCampaignNameChange={setCampaignName}'), true)
+  assert.equal(source.includes('setCampaignName(\'\')'), true)
 })
 
 test('App renders sender email card only when sender addresses are present', () => {

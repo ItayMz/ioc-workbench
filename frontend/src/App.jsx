@@ -523,6 +523,8 @@ function App() {
         clearVersion={clearVersion}
       />
 
+      {exportSummaryEntries.length > 0 && <ExportSummaryCards summaries={exportSummaryEntries} />}
+
       <ErrorBanner message={errorMessage} />
 
       {loading && (
@@ -571,7 +573,6 @@ function App() {
               )}
             </>
           )}
-          {exportSummaryEntries.length > 0 && <ExportSummaryCards summaries={exportSummaryEntries} />}
         </>
       )}
 
