@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import ControlPanel from './components/ControlPanel'
+import CrowdStrikeResults from './components/CrowdStrikeResults'
 import ErrorBanner from './components/ErrorBanner'
 import IndicatorResults from './components/IndicatorResults'
 import KqlCards from './components/KqlCards'
@@ -33,6 +34,10 @@ import {
 import {
   getDetectedSenderEmailAddresses,
 } from './services/senderEmailWorkflow.js'
+import {
+  getWorkflowPresentation,
+  WORKFLOW_MODE,
+} from './services/workflowMode.js'
 import './styles/theme.css'
 import './styles/app.css'
 
@@ -53,6 +58,7 @@ function App() {
   const [backendConnectionState, setBackendConnectionState] = useState(BACKEND_CONNECTION_STATES.CHECKING)
   const [showConnectedBanner, setShowConnectedBanner] = useState(false)
   const [isLookbackRefreshing, setIsLookbackRefreshing] = useState(false)
+  const [workflowMode, setWorkflowMode] = useState(WORKFLOW_MODE.DEFENDER)
   const isMountedRef = useRef(true)
   const connectedHideTimerRef = useRef(null)
   const lookbackRefreshInFlightRef = useRef(false)
@@ -67,6 +73,7 @@ function App() {
   const showBackendStatusSpinner = shouldShowBackendSpinner(backendConnectionState)
   const senderEmailAddresses = getDetectedSenderEmailAddresses(parseResult?.indicators)
   const showSenderEmailInfoCard = senderEmailAddresses.length > 0
+  const workflowPresentation = getWorkflowPresentation(workflowMode)
 
   const onBackendStateChange = (nextState) => {
     if (!isMountedRef.current) {
@@ -272,6 +279,7 @@ function App() {
     setLastSuccessfulParseResult(null)
     lookbackRefreshInFlightRef.current = false
     setIsLookbackRefreshing(false)
+    setWorkflowMode(WORKFLOW_MODE.DEFENDER)
     setClearVersion((current) => current + 1)
   }
 
@@ -348,6 +356,7 @@ function App() {
         lookbackDays={lookbackDays}
         campaignName={campaignName}
         defaultCategory={defaultCategory}
+        workflowMode={workflowPresentation.mode}
         uploadSummary={uploadSummary}
         loading={loading}
         lookbackRefreshing={isLookbackRefreshing}
@@ -355,6 +364,7 @@ function App() {
         onLookbackChange={handleLookbackChange}
         onCampaignNameChange={setCampaignName}
         onDefaultCategoryChange={setDefaultCategory}
+        onWorkflowModeChange={setWorkflowMode}
         onProcess={handleProcess}
         onUpload={handleUpload}
         onExport={handleExport}
@@ -363,6 +373,7 @@ function App() {
         hasAccumulatedResult={Boolean(lastSuccessfulParseResult)}
         backendConnected={isBackendConnected(backendConnectionState)}
         backendActionsDisabled={backendActionsDisabled}
+        showDefenderControls={workflowPresentation.isDefender}
         clearVersion={clearVersion}
       />
 
@@ -383,9 +394,18 @@ function App() {
       {parseResult && !loading && (
         <>
           <SummaryCards summary={parseResult.summary} />
-          {showSenderEmailInfoCard && <SenderEmailInfoCard emailAddresses={senderEmailAddresses} />}
+          {showSenderEmailInfoCard && (
+            <SenderEmailInfoCard
+              emailAddresses={senderEmailAddresses}
+              message={workflowPresentation.senderGuidanceMessage}
+            />
+          )}
           <IndicatorResults indicators={parseResult.indicators} />
-          <KqlCards queries={parseResult.kqlQueries} />
+          {workflowPresentation.isDefender ? (
+            <KqlCards queries={parseResult.kqlQueries} />
+          ) : (
+            <CrowdStrikeResults indicators={parseResult.indicators} />
+          )}
         </>
       )}
     </div>

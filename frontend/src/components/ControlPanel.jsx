@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { DEFENDER_CATEGORIES } from '../services/defenderCategories.js'
+import { WORKFLOW_MODE } from '../services/workflowMode.js'
 
 function ControlPanel({
   rawText,
   lookbackDays,
   campaignName,
   defaultCategory,
+  workflowMode,
   uploadSummary,
   loading,
   lookbackRefreshing,
@@ -13,6 +15,7 @@ function ControlPanel({
   onLookbackChange,
   onCampaignNameChange,
   onDefaultCategoryChange,
+  onWorkflowModeChange,
   onProcess,
   onUpload,
   onExport,
@@ -21,6 +24,7 @@ function ControlPanel({
   hasAccumulatedResult,
   backendConnected,
   backendActionsDisabled,
+  showDefenderControls,
   clearVersion,
 }) {
   const uploadRef = useRef(null)
@@ -100,6 +104,21 @@ function ControlPanel({
       </div>
 
       <div className="control-row">
+        <label className="field-label" htmlFor="workflowModeSelect">Workflow</label>
+        <select
+          id="workflowModeSelect"
+          className="lookback-select"
+          value={workflowMode}
+          onChange={(event) => onWorkflowModeChange(event.target.value)}
+          disabled={loading}
+        >
+          <option value={WORKFLOW_MODE.DEFENDER}>Microsoft Defender</option>
+          <option value={WORKFLOW_MODE.CROWDSTRIKE}>CrowdStrike</option>
+        </select>
+      </div>
+
+      {showDefenderControls && (
+        <div className="control-row">
         <label className="field-label" htmlFor="lookbackSelect">Lookback</label>
         <select
           id="lookbackSelect"
@@ -114,22 +133,25 @@ function ControlPanel({
           <option value={180}>Last 180 days</option>
           <option value={365}>Last 365 days</option>
         </select>
-      </div>
+        </div>
+      )}
 
-      <div className="control-row">
-        <label className="field-label" htmlFor="defaultCategorySelect">Default Category</label>
-        <select
-          id="defaultCategorySelect"
-          className="lookback-select"
-          value={defaultCategory}
-          onChange={(event) => onDefaultCategoryChange(event.target.value)}
-          disabled={loading}
-        >
-          {DEFENDER_CATEGORIES.map((category) => (
-            <option key={category} value={category}>{category}</option>
-          ))}
-        </select>
-      </div>
+      {showDefenderControls && (
+        <div className="control-row">
+          <label className="field-label" htmlFor="defaultCategorySelect">Default Category</label>
+          <select
+            id="defaultCategorySelect"
+            className="lookback-select"
+            value={defaultCategory}
+            onChange={(event) => onDefaultCategoryChange(event.target.value)}
+            disabled={loading}
+          >
+            {DEFENDER_CATEGORIES.map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="button-row">
         <button className="primary" type="button" onClick={onProcess} disabled={backendActionsDisabled}>
@@ -138,13 +160,19 @@ function ControlPanel({
         <button type="button" onClick={() => uploadRef.current?.click()} disabled={backendActionsDisabled}>
           {hasAccumulatedResult ? 'Add Files to Current Export' : 'Upload CSV/TXT/XLSX Files'}
         </button>
-        <button type="button" onClick={onExport} disabled={backendActionsDisabled || !canExport}>
-          Export Defender CSV
-        </button>
+        {showDefenderControls && (
+          <button type="button" onClick={onExport} disabled={backendActionsDisabled || !canExport}>
+            Export Defender CSV
+          </button>
+        )}
         <button type="button" className="button-clear" onClick={onClear} disabled={loading}>
           Clear
         </button>
       </div>
+
+      {!showDefenderControls && (
+        <p className="muted workflow-note">CrowdStrike workflow selected. Defender-specific outputs are hidden.</p>
+      )}
 
       <div
         className={`drop-zone${isDragOver ? ' drop-zone-active' : ''}${backendActionsDisabled ? ' drop-zone-disabled' : ''}`}

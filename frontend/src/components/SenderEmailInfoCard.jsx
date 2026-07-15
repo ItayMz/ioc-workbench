@@ -4,7 +4,7 @@ import { buildSenderEmailCopyPayload } from '../services/senderEmailWorkflow.js'
 
 const COPY_RESET_MS = 1800
 
-function SenderEmailInfoCard({ emailAddresses }) {
+function SenderEmailInfoCard({ emailAddresses, message }) {
   const [copied, setCopied] = useState(false)
   const resetTimerRef = useRef(null)
 
@@ -46,7 +46,7 @@ function SenderEmailInfoCard({ emailAddresses }) {
       </div>
 
       <p className="muted sender-email-message">
-        The following sender email address(es) were detected. Continue the investigation in Microsoft Defender Explorer under Email &amp; Collaboration, and perform any required blocking there.
+        {message}
       </p>
 
       <pre className="sender-email-list">{emailAddresses.join('\n')}</pre>
