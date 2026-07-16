@@ -81,6 +81,6 @@ test('lookback refresh failure message remains friendly and previous result can 
   assert.deepEqual(merged.kqlQueries, previousResult.kqlQueries)
 })
 
-test('default lookback remains 90 for clear/reset workflow', () => {
-  assert.equal(DEFAULT_LOOKBACK_DAYS, 90)
+test('default lookback remains 30 for clear/reset workflow', () => {
+  assert.equal(DEFAULT_LOOKBACK_DAYS, 30)
 })

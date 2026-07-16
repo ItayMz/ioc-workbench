@@ -10,6 +10,7 @@ const crowdStrikeQueryCardPath = resolve(process.cwd(), 'src/components/CrowdStr
 const crowdStrikeResultsPath = resolve(process.cwd(), 'src/components/CrowdStrikeResults.jsx')
 const exportSummaryCardsPath = resolve(process.cwd(), 'src/components/ExportSummaryCards.jsx')
 const controlPanelPath = resolve(process.cwd(), 'src/components/ControlPanel.jsx')
+const loadingSpinnerPath = resolve(process.cwd(), 'src/components/LoadingSpinner.jsx')
 const appPath = resolve(process.cwd(), 'src/App.jsx')
 const summaryCardsPath = resolve(process.cwd(), 'src/components/SummaryCards.jsx')
 const appStylesPath = resolve(process.cwd(), 'src/styles/app.css')
@@ -75,7 +76,7 @@ test('Control panel keeps workflow export action in main action row for Defender
   const source = readFileSync(controlPanelPath, 'utf8')
 
   assert.equal(source.includes('showDefenderControls && ('), true)
-  assert.equal(source.includes('{exportButtonLabel}'), true)
+  assert.equal(source.includes("{exportInFlight ? 'Generating export...' : exportButtonLabel}"), true)
   assert.equal(source.includes('onClick={onExport}'), true)
   assert.equal(source.includes('disabled={exportDisabled}'), true)
 })
@@ -117,10 +118,44 @@ test('App wires workflow mode and keeps Defender/CrowdStrike outputs isolated', 
   assert.equal(source.includes('<QradarExport'), false)
 })
 
+test('App shows Detected Indicators as a shared workflow-independent section only when detected IOC groups exist', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('const detectedIndicators = getDetectedIndicators(parseResult?.indicators)'), true)
+  assert.equal(source.includes('const showIndicatorResults = Boolean(parseResult) && detectedIndicators.length > 0 && !isProcessingInputs'), true)
+  assert.equal(source.includes('{showIndicatorResults && <IndicatorResults indicators={parseResult.indicators} />}'), true)
+  assert.equal(source.includes('{workflowPresentation.isDefender && <IndicatorResults indicators={parseResult.indicators} />}'), false)
+})
+
+test('Detected Indicators render order stays between Detection Summary and workflow-specific outputs for both workflows', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  const summaryIndex = source.indexOf('<SummaryCards')
+  const indicatorIndex = source.indexOf('<IndicatorResults indicators={parseResult.indicators} />')
+  const kqlIndex = source.indexOf('<KqlCards queries={parseResult.kqlQueries} />')
+  const crowdStrikeIndex = source.indexOf('<CrowdStrikeResults')
+
+  assert.equal(summaryIndex > -1, true)
+  assert.equal(indicatorIndex > -1, true)
+  assert.equal(kqlIndex > -1, true)
+  assert.equal(crowdStrikeIndex > -1, true)
+  assert.equal(summaryIndex < indicatorIndex, true)
+  assert.equal(indicatorIndex < kqlIndex, true)
+  assert.equal(indicatorIndex < crowdStrikeIndex, true)
+})
+
+test('Indicator copy affordances remain available', () => {
+  const source = readFileSync(indicatorResultsPath, 'utf8')
+
+  assert.equal(source.includes('Copy All'), true)
+  assert.equal(source.includes('onClick={copyAllIndicators}'), true)
+  assert.equal(source.includes('onClick={() => copySingleGroup(group)}'), true)
+})
+
 test('CrowdStrike layout order is export summary then detection summary then query then sender card', () => {
   const source = readFileSync(appPath, 'utf8')
 
-  const parseResultBlockIndex = source.indexOf('{parseResult && !loading && (')
+  const parseResultBlockIndex = source.indexOf('{parseResult && !isProcessingInputs && (')
   const exportSummaryIndex = source.indexOf('<ExportSummaryCards')
   const summaryIndex = source.indexOf('<SummaryCards')
   const crowdStrikeBranchIndex = source.indexOf(') : (')
@@ -236,6 +271,12 @@ test('App preserves Campaign Name state across workflow switching', () => {
   assert.equal(source.includes('setCampaignName(\'\')'), true)
 })
 
+test('Clear handler resets lookback to configured default', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('setLookbackDays(DEFAULT_LOOKBACK_DAYS)'), true)
+})
+
 test('App renders sender email card only in CrowdStrike workflow when sender addresses are present', () => {
   const source = readFileSync(appPath, 'utf8')
 
@@ -252,6 +293,35 @@ test('App integrates analyst playbook below workflow outputs and uses builder se
   assert.equal(source.includes('buildAnalystPlaybook'), true)
   assert.equal(source.includes('shouldShowAnalystPlaybook'), true)
   assert.equal(source.includes('{showAnalystPlaybook && <AnalystPlaybook playbook={playbook} />}'), true)
+})
+
+test('shared loading spinner component provides reusable message-based loading UI', () => {
+  const source = readFileSync(loadingSpinnerPath, 'utf8')
+
+  assert.equal(source.includes('function LoadingSpinner({ message, subtle = false })'), true)
+  assert.equal(source.includes('<span className="loading-spinner" aria-hidden="true" />'), true)
+  assert.equal(source.includes('<span>{message}</span>'), true)
+})
+
+test('App uses loading spinner during async processing and clears loading action state in success and failure flows', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('<LoadingSpinner message={activeLoadingMessage} />'), true)
+  assert.equal(source.includes("setActiveLoadingAction('processing')"), true)
+  assert.equal(source.includes("setActiveLoadingAction('uploading')"), true)
+  assert.equal(source.includes("setActiveLoadingAction('defender-export')"), true)
+  assert.equal((source.match(/setActiveLoadingAction\(null\)/g) || []).length >= 3, true)
+  assert.equal((source.match(/setActiveLoadingMessage\(''\)/g) || []).length >= 3, true)
+})
+
+test('Control panel only disables controls related to processing and upload operations', () => {
+  const source = readFileSync(controlPanelPath, 'utf8')
+
+  assert.equal(source.includes('const isProcessingInputs = processingInFlight || uploadingInFlight'), true)
+  assert.equal(source.includes('disabled={isProcessingInputs}'), true)
+  assert.equal(source.includes('disabled={backendActionsDisabled}'), true)
+  assert.equal(source.includes("{processingInFlight ? 'Processing...' : (hasAccumulatedResult ? 'Add IOCs' : 'Process IOCs')}"), true)
+  assert.equal(source.includes("{uploadingInFlight ? 'Processing files...' : (hasAccumulatedResult ? 'Add Files to Current Export' : 'Upload CSV/TXT/XLSX Files')}"), true)
 })
 
 test('Analyst playbook component and styles include card sections without automatic badges', () => {
@@ -271,4 +341,12 @@ test('ignored items toggle and ignored panel are removed from detected indicator
   assert.equal(source.includes('Show ignored items'), false)
   assert.equal(source.includes('Hide ignored items'), false)
   assert.equal(source.includes('ignored-panel'), false)
+})
+
+test('shared loading styles are centralized in app stylesheet', () => {
+  const source = readFileSync(appStylesPath, 'utf8')
+
+  assert.equal(source.includes('.loading-card {'), true)
+  assert.equal(source.includes('.loading-spinner-row {'), true)
+  assert.equal(source.includes('.loading-spinner {'), true)
 })

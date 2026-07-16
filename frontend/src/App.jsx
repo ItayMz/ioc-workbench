@@ -5,6 +5,7 @@ import ErrorBanner from './components/ErrorBanner'
 import ExportSummaryCards from './components/ExportSummaryCards'
 import IndicatorResults from './components/IndicatorResults'
 import KqlCards from './components/KqlCards'
+import LoadingSpinner from './components/LoadingSpinner'
 import AnalystPlaybook from './components/AnalystPlaybook'
 import SenderEmailInfoCard from './components/SenderEmailInfoCard'
 import SummaryCards from './components/SummaryCards'
@@ -34,6 +35,7 @@ import {
   LOOKBACK_REFRESH_FAILURE_MESSAGE,
   shouldAttemptLookbackRefresh,
 } from './services/lookbackRefresh.js'
+import { getDetectedIndicators } from './services/indicatorPresentation.js'
 import {
   getDetectedSenderEmailAddresses,
 } from './services/senderEmailWorkflow.js'
@@ -75,10 +77,11 @@ function getValidDetectedCount(parseData) {
 }
 
 function App() {
+  const [activeLoadingMessage, setActiveLoadingMessage] = useState('')
+  const [activeLoadingAction, setActiveLoadingAction] = useState(null)
   const [rawText, setRawText] = useState(getInitialRawText())
   const [lookbackDays, setLookbackDays] = useState(DEFAULT_LOOKBACK_DAYS)
   const [parseResult, setParseResult] = useState(null)
-  const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [campaignName, setCampaignName] = useState('')
   const [defaultCategory, setDefaultCategory] = useState(DEFAULT_DEFENDER_CATEGORY)
@@ -105,22 +108,29 @@ function App() {
   const lookbackRefreshInFlightRef = useRef(false)
   const toastHideTimerRef = useRef(null)
 
+  const isProcessing = activeLoadingAction === 'processing'
+  const isUploading = activeLoadingAction === 'uploading'
+  const isDefenderExporting = activeLoadingAction === 'defender-export'
+  const isProcessingInputs = isProcessing || isUploading
+
   const exportState = resolveExportRequest({
     lastSuccessfulParsePayload,
     lastSuccessfulParseResult,
   })
 
-  const backendActionsDisabled = shouldDisableBackendActions(backendConnectionState, loading)
+  const backendActionsDisabled = shouldDisableBackendActions(backendConnectionState, isProcessingInputs)
   const backendStatusContent = getBackendStatusContent(backendConnectionState)
   const showBackendStatusSpinner = shouldShowBackendSpinner(backendConnectionState)
+  const detectedIndicators = getDetectedIndicators(parseResult?.indicators)
+  const showIndicatorResults = Boolean(parseResult) && detectedIndicators.length > 0 && !isProcessingInputs
   const senderEmailAddresses = getDetectedSenderEmailAddresses(parseResult?.indicators)
   const workflowPresentation = getWorkflowPresentation(workflowMode)
   const showSenderEmailInfoCard = workflowPresentation.isCrowdStrike && senderEmailAddresses.length > 0
   const crowdStrikeCampaignName = campaignName || detectedCampaignName || ''
   const crowdStrikeBlockingEligibleCount = getCrowdStrikeBlockingEligibleCount(parseResult?.indicators)
   const qradarEligibleCount = getQradarEligibleCount(parseResult?.indicators)
-  const crowdStrikeExportDisabled = loading || crowdStrikeBlockingEligibleCount === 0
-  const qradarExportDisabled = loading || qradarEligibleCount === 0
+  const crowdStrikeExportDisabled = isDefenderExporting || crowdStrikeBlockingEligibleCount === 0
+  const qradarExportDisabled = isDefenderExporting || qradarEligibleCount === 0
   const exportSummaryEntries = [
     exportSummaries.defender,
     exportSummaries.crowdstrike,
@@ -228,7 +238,8 @@ function App() {
       return
     }
 
-    setLoading(true)
+    setActiveLoadingAction('processing')
+    setActiveLoadingMessage('Parsing indicators...')
     setErrorMessage('')
 
     try {
@@ -259,7 +270,8 @@ function App() {
     } catch (error) {
       setErrorMessage(error.message)
     } finally {
-      setLoading(false)
+      setActiveLoadingAction(null)
+      setActiveLoadingMessage('')
     }
   }
 
@@ -269,7 +281,8 @@ function App() {
       return
     }
 
-    setLoading(true)
+    setActiveLoadingAction('uploading')
+    setActiveLoadingMessage('Processing files...')
     setErrorMessage('')
 
     try {
@@ -312,7 +325,8 @@ function App() {
     } catch (error) {
       setErrorMessage(error.message)
     } finally {
-      setLoading(false)
+      setActiveLoadingAction(null)
+      setActiveLoadingMessage('')
     }
   }
 
@@ -328,7 +342,8 @@ function App() {
       return
     }
 
-    setLoading(true)
+    setActiveLoadingAction('defender-export')
+    setActiveLoadingMessage('Generating export...')
     setErrorMessage('')
 
     try {
@@ -352,7 +367,8 @@ function App() {
     } catch (error) {
       setErrorMessage(error.message)
     } finally {
-      setLoading(false)
+      setActiveLoadingAction(null)
+      setActiveLoadingMessage('')
     }
   }
 
@@ -408,6 +424,8 @@ function App() {
     setRawText('')
     setLookbackDays(DEFAULT_LOOKBACK_DAYS)
     setParseResult(null)
+    setActiveLoadingAction(null)
+    setActiveLoadingMessage('')
     setErrorMessage('')
     setCampaignName('')
     setDefaultCategory(DEFAULT_DEFENDER_CATEGORY)
@@ -479,7 +497,7 @@ function App() {
     }
   }
 
-  const defenderExportDisabled = backendActionsDisabled || !exportState.canExport
+  const defenderExportDisabled = !isBackendConnected(backendConnectionState) || isDefenderExporting || !exportState.canExport
 
   return (
     <div className="app-shell">
@@ -511,7 +529,9 @@ function App() {
         defaultCategory={defaultCategory}
         workflowMode={workflowPresentation.mode}
         uploadSummary={uploadSummary}
-        loading={loading}
+        processingInFlight={isProcessing}
+        uploadingInFlight={isUploading}
+        exportInFlight={isDefenderExporting}
         lookbackRefreshing={isLookbackRefreshing}
         onRawTextChange={setRawText}
         onLookbackChange={handleLookbackChange}
@@ -544,19 +564,13 @@ function App() {
 
       <ErrorBanner message={errorMessage} />
 
-      {loading && (
-        <section className="card loading-card" aria-live="polite">
-          Processing IOC payload via backend API...
-        </section>
+      {activeLoadingAction && <LoadingSpinner message={activeLoadingMessage} />}
+
+      {!activeLoadingAction && isLookbackRefreshing && (
+        <LoadingSpinner message="Refreshing KQL queries for the selected lookback..." subtle />
       )}
 
-      {!loading && isLookbackRefreshing && (
-        <section className="card loading-card loading-card-subtle" aria-live="polite">
-          Refreshing KQL queries for the selected lookback...
-        </section>
-      )}
-
-      {parseResult && !loading && (
+      {parseResult && !isProcessingInputs && (
         <>
           <SummaryCards
             summary={parseResult.summary}
@@ -565,7 +579,7 @@ function App() {
               qradarEligibleIps: qradarEligibleCount,
             } : null}
           />
-          {workflowPresentation.isDefender && <IndicatorResults indicators={parseResult.indicators} />}
+          {showIndicatorResults && <IndicatorResults indicators={parseResult.indicators} />}
           {workflowPresentation.isDefender ? (
             <>
               <KqlCards queries={parseResult.kqlQueries} />

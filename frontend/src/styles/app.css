@@ -303,6 +303,22 @@ button:disabled {
   color: #bfdbfe;
 }
 
+.loading-spinner-row {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-spinner {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  border: 2px solid rgba(191, 219, 254, 0.3);
+  border-top-color: rgba(191, 219, 254, 0.95);
+  animation: backend-spin 850ms linear infinite;
+}
+
 .loading-card-subtle {
   color: #c6daf8;
   border-color: rgba(96, 165, 250, 0.38);

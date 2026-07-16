@@ -1,4 +1,4 @@
-export const DEFAULT_LOOKBACK_DAYS = 90
+export const DEFAULT_LOOKBACK_DAYS = 30
 export const LOOKBACK_REFRESH_FAILURE_MESSAGE = 'Unable to refresh KQL queries for the selected lookback. Showing previous results.'
 
 export function shouldAttemptLookbackRefresh({

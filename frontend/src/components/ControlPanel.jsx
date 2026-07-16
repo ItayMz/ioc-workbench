@@ -9,7 +9,9 @@ function ControlPanel({
   defaultCategory,
   workflowMode,
   uploadSummary,
-  loading,
+  processingInFlight,
+  uploadingInFlight,
+  exportInFlight,
   lookbackRefreshing,
   onRawTextChange,
   onLookbackChange,
@@ -39,6 +41,7 @@ function ControlPanel({
 }) {
   const uploadRef = useRef(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const isProcessingInputs = processingInFlight || uploadingInFlight
 
   useEffect(() => {
     setIsDragOver(false)
@@ -97,7 +100,7 @@ function ControlPanel({
         value={rawText}
         onChange={(event) => onRawTextChange(event.target.value)}
         placeholder="Paste IOC text here"
-        disabled={loading}
+        disabled={isProcessingInputs}
       />
 
       {showDefenderControls && (
@@ -110,7 +113,7 @@ function ControlPanel({
             value={campaignName}
             onChange={(event) => onCampaignNameChange(event.target.value)}
             placeholder="Optional campaign name"
-            disabled={loading}
+            disabled={isProcessingInputs}
           />
         </div>
       )}
@@ -122,7 +125,7 @@ function ControlPanel({
             type="button"
             className={`workflow-badge-button${workflowMode === WORKFLOW_MODE.DEFENDER ? ' active' : ''}`}
             onClick={() => onWorkflowModeChange(WORKFLOW_MODE.DEFENDER)}
-            disabled={loading}
+            disabled={isProcessingInputs}
           >
             Microsoft Defender
           </button>
@@ -130,7 +133,7 @@ function ControlPanel({
             type="button"
             className={`workflow-badge-button${workflowMode === WORKFLOW_MODE.CROWDSTRIKE ? ' active' : ''}`}
             onClick={() => onWorkflowModeChange(WORKFLOW_MODE.CROWDSTRIKE)}
-            disabled={loading}
+            disabled={isProcessingInputs}
           >
             CrowdStrike
           </button>
@@ -145,7 +148,7 @@ function ControlPanel({
           className="lookback-select"
           value={lookbackDays}
           onChange={(event) => onLookbackChange(Number(event.target.value))}
-          disabled={loading || lookbackRefreshing}
+          disabled={isProcessingInputs || lookbackRefreshing}
         >
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>
@@ -164,7 +167,7 @@ function ControlPanel({
             className="lookback-select"
             value={defaultCategory}
             onChange={(event) => onDefaultCategoryChange(event.target.value)}
-            disabled={loading}
+            disabled={isProcessingInputs}
           >
             {DEFENDER_CATEGORIES.map((category) => (
               <option key={category} value={category}>{category}</option>
@@ -182,7 +185,7 @@ function ControlPanel({
               className="lookback-select"
               value={crowdStrikeSeverity}
               onChange={(event) => onCrowdStrikeSeverityChange(event.target.value)}
-              disabled={loading}
+              disabled={isProcessingInputs}
             >
               <option value="high">high</option>
               <option value="medium">medium</option>
@@ -197,7 +200,7 @@ function ControlPanel({
               value={crowdStrikeDescription}
               onChange={(event) => onCrowdStrikeDescriptionChange(event.target.value)}
               placeholder="Optional description applied to every exported row"
-              disabled={loading}
+              disabled={isProcessingInputs}
             />
           </div>
         </>
@@ -205,14 +208,14 @@ function ControlPanel({
 
       <div className="button-row">
         <button className="primary" type="button" onClick={onProcess} disabled={backendActionsDisabled}>
-          {loading ? 'Processing...' : (hasAccumulatedResult ? 'Add IOCs' : 'Process IOCs')}
+          {processingInFlight ? 'Processing...' : (hasAccumulatedResult ? 'Add IOCs' : 'Process IOCs')}
         </button>
         <button type="button" onClick={() => uploadRef.current?.click()} disabled={backendActionsDisabled}>
-          {hasAccumulatedResult ? 'Add Files to Current Export' : 'Upload CSV/TXT/XLSX Files'}
+          {uploadingInFlight ? 'Processing files...' : (hasAccumulatedResult ? 'Add Files to Current Export' : 'Upload CSV/TXT/XLSX Files')}
         </button>
         {showDefenderControls && (
           <button type="button" onClick={onExport} disabled={exportDisabled}>
-            {exportButtonLabel}
+            {exportInFlight ? 'Generating export...' : exportButtonLabel}
           </button>
         )}
         {!showDefenderControls && (
@@ -225,7 +228,7 @@ function ControlPanel({
             {secondaryExportButtonLabel}
           </button>
         )}
-        <button type="button" className="button-clear" onClick={onClear} disabled={loading}>
+        <button type="button" className="button-clear" onClick={onClear} disabled={isProcessingInputs}>
           Clear
         </button>
       </div>
