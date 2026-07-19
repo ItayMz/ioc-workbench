@@ -43,6 +43,7 @@ function ControlPanel({
   workflowTransitionPhase,
   clearVersion,
   onRegisterOpenFilePicker,
+  panelRef,
 }) {
   const uploadRef = useRef(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -110,7 +111,7 @@ function ControlPanel({
   }
 
   return (
-    <section className="card control-panel">
+    <section className="card control-panel" ref={panelRef}>
       <div className="panel-top">
         <h2>Workflow</h2>
         <p className="muted">Select the target workflow first, then provide indicators for analysis.</p>
@@ -181,7 +182,7 @@ function ControlPanel({
       )}
 
       <div className={`workflow-transition-shell workflow-transition-${workflowTransitionPhase}`}>
-        <div className="button-row intake-primary-action sticky-action-bar">
+        <div className="button-row intake-primary-action">
           <button className="primary" type="button" onClick={onProcess} disabled={backendActionsDisabled}>
             {processingInFlight ? 'Analyzing...' : 'Analyze IOCs'}
           </button>

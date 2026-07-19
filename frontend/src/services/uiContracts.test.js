@@ -9,6 +9,7 @@ const additionalInvestigationCardPath = resolve(process.cwd(), 'src/components/A
 const crowdStrikeQueryCardPath = resolve(process.cwd(), 'src/components/CrowdStrikeQueryCard.jsx')
 const crowdStrikeResultsPath = resolve(process.cwd(), 'src/components/CrowdStrikeResults.jsx')
 const controlPanelPath = resolve(process.cwd(), 'src/components/ControlPanel.jsx')
+const floatingExportBarPath = resolve(process.cwd(), 'src/components/FloatingExportBar.jsx')
 const loadingSpinnerPath = resolve(process.cwd(), 'src/components/LoadingSpinner.jsx')
 const exportSuccessBannerPath = resolve(process.cwd(), 'src/components/ExportSuccessBanner.jsx')
 const appPath = resolve(process.cwd(), 'src/App.jsx')
@@ -76,13 +77,24 @@ test('workflow selector uses badge buttons for Microsoft Defender and CrowdStrik
 test('Control panel places Analyze IOCs action in the intake section', () => {
   const source = readFileSync(controlPanelPath, 'utf8')
 
-  assert.equal(source.includes('className="button-row intake-primary-action sticky-action-bar"'), true)
+  assert.equal(source.includes('className="button-row intake-primary-action"'), true)
+  assert.equal(source.includes('sticky-action-bar'), false)
   assert.equal(source.includes("{processingInFlight ? 'Analyzing...' : 'Analyze IOCs'}"), true)
   assert.equal(source.includes('onClick={onProcess}'), true)
   assert.equal(source.includes('onClick={onExport}'), true)
   assert.equal(source.includes('onClick={onCrowdStrikeExport}'), true)
   assert.equal(source.includes('onClick={onSecondaryExport}'), true)
   assert.equal(source.includes('button-clear'), true)
+})
+
+test('Action-row sticky positioning styles are removed and floating export styles are defined', () => {
+  const cssSource = readFileSync(appStylesPath, 'utf8')
+
+  assert.equal(cssSource.includes('.sticky-action-bar {'), false)
+  assert.equal(cssSource.includes('position: sticky;'), false)
+  assert.equal(cssSource.includes('.floating-export-bar {'), true)
+  assert.equal(cssSource.includes('position: fixed;'), true)
+  assert.equal(cssSource.includes('aria-label="Quick export actions"'), false)
 })
 
 test('Control panel renders Campaign name input only in Defender workflow', () => {
@@ -130,6 +142,47 @@ test('App shows Detected Indicators as a shared workflow-independent section onl
   assert.equal(source.includes('<IndicatorResults'), true)
   assert.equal(source.includes('indicators={parseResult.indicators}'), true)
   assert.equal(source.includes('{workflowPresentation.isDefender && <IndicatorResults indicators={parseResult.indicators} />}'), false)
+})
+
+test('App computes floating export bar visibility based on export readiness and ControlPanel intersection', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('const [isControlPanelVisible, setIsControlPanelVisible] = useState(true)'), true)
+  assert.equal(source.includes('const hasQuickExportReady = Boolean(parseResult) && !isProcessingInputs && (hasDefenderQuickExport || hasCrowdStrikeQuickExport)'), true)
+  assert.equal(source.includes('const showFloatingExportBar = hasQuickExportReady && !isControlPanelVisible'), true)
+  assert.equal(source.includes('new IntersectionObserver('), true)
+  assert.equal(source.includes('setIsControlPanelVisible(Boolean(entry?.isIntersecting))'), true)
+  assert.equal(source.includes('observer.observe(observedElement)'), true)
+})
+
+test('App wires floating export bar to existing export handlers and smooth back-to-top action', () => {
+  const source = readFileSync(appPath, 'utf8')
+
+  assert.equal(source.includes('<FloatingExportBar'), true)
+  assert.equal(source.includes('visible={showFloatingExportBar}'), true)
+  assert.equal(source.includes('isDefenderMode={displayedWorkflowPresentation.isDefender}'), true)
+  assert.equal(source.includes('onDefenderExport={handleDefenderExport}'), true)
+  assert.equal(source.includes('onCrowdStrikeExport={handleCrowdStrikeExport}'), true)
+  assert.equal(source.includes('onQradarExport={handleQradarExport}'), true)
+  assert.equal(source.includes('crowdStrikeExportDisabled={crowdStrikeExportDisabled}'), true)
+  assert.equal(source.includes('qradarExportDisabled={qradarExportDisabled}'), true)
+  assert.equal(source.includes('target.scrollIntoView({ behavior: \'smooth\', block: \'start\' })'), true)
+  assert.equal(source.includes('window.scrollTo({ top: 0, behavior: \'smooth\' })'), true)
+})
+
+test('Floating export bar component renders workflow-specific actions and keyboard-accessible controls', () => {
+  const source = readFileSync(floatingExportBarPath, 'utf8')
+
+  assert.equal(source.includes('aria-label="Quick export actions"'), true)
+  assert.equal(source.includes('Ready for export'), true)
+  assert.equal(source.includes('{isDefenderMode ? ('), true)
+  assert.equal(source.includes('onClick={onDefenderExport}'), true)
+  assert.equal(source.includes('onClick={onCrowdStrikeExport}'), true)
+  assert.equal(source.includes('onClick={onQradarExport}'), true)
+  assert.equal(source.includes('disabled={crowdStrikeExportDisabled}'), true)
+  assert.equal(source.includes('disabled={qradarExportDisabled}'), true)
+  assert.equal(source.includes('aria-label="Back to top"'), true)
+  assert.equal(source.includes('type="button"'), true)
 })
 
 test('App supports global file drag-and-drop overlay with drag counter and file-only filtering', () => {

@@ -9,6 +9,10 @@
   gap: 1rem;
 }
 
+.app-shell-with-floating-export {
+  padding-bottom: 6.25rem;
+}
+
 .inline-icon {
   width: 0.95rem;
   height: 0.95rem;
@@ -234,15 +238,71 @@ button:disabled {
   align-items: center;
 }
 
-.sticky-action-bar {
-  position: sticky;
-  top: 0.7rem;
-  z-index: 8;
-  background: rgba(10, 19, 36, 0.92);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.55rem;
-  backdrop-filter: blur(2px);
+.floating-export-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translate(-50%, 10px);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: min(920px, calc(100% - 2rem));
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(8, 17, 31, 0.82);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 12px 28px rgba(2, 6, 18, 0.4);
+  padding: 0.6rem 0.7rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.floating-export-bar.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.floating-export-bar.hidden {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+}
+
+.floating-export-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 220px;
+}
+
+.floating-export-ready {
+  color: #dcfce7;
+  font-weight: 600;
+}
+
+.floating-export-meta {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.floating-export-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.floating-export-back-to-top {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.3rem;
+  border-color: rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.6);
 }
 
 .upload-summary {
@@ -1149,6 +1209,10 @@ button:disabled {
   .global-file-drop-overlay {
     animation: none;
   }
+
+  .floating-export-bar {
+    transition: none;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1192,6 +1256,27 @@ button:disabled {
 
   .button-row {
     flex-wrap: wrap;
+  }
+
+  .app-shell-with-floating-export {
+    padding-bottom: 8.25rem;
+  }
+
+  .floating-export-bar {
+    width: calc(100% - 1.2rem);
+    bottom: 0.7rem;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .floating-export-status {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .floating-export-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .app-footer-bottom {

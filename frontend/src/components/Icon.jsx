@@ -69,6 +69,12 @@ function Icon({ name, className = '' }) {
           <path d="M7 10h.01M10 10h.01M13 10h.01M16 10h.01M7 14h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       )
+    case 'arrow-up':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+          <path d="M12 20V6m0 0l-4 4m4-4l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
     default:
       return null
   }

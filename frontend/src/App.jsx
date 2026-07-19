@@ -6,6 +6,7 @@ import ControlPanel from './components/ControlPanel'
 import CrowdStrikeResults from './components/CrowdStrikeResults'
 import ErrorBanner from './components/ErrorBanner'
 import ExportSuccessBanner from './components/ExportSuccessBanner'
+import FloatingExportBar from './components/FloatingExportBar'
 import IndicatorResults from './components/IndicatorResults'
 import KqlCards from './components/KqlCards'
 import LoadingSpinner from './components/LoadingSpinner'
@@ -123,6 +124,7 @@ function App() {
   const [workflowTransitionPhase, setWorkflowTransitionPhase] = useState('in')
   const [aboutOpen, setAboutOpen] = useState(false)
   const [isGlobalFileDragActive, setIsGlobalFileDragActive] = useState(false)
+  const [isControlPanelVisible, setIsControlPanelVisible] = useState(true)
   const isMountedRef = useRef(true)
   const connectedHideTimerRef = useRef(null)
   const lookbackRefreshInFlightRef = useRef(false)
@@ -132,6 +134,7 @@ function App() {
   const workflowTransitionTimerRef = useRef(null)
   const openFilePickerRef = useRef(null)
   const globalFileDragDepthRef = useRef(0)
+  const controlPanelRef = useRef(null)
 
   const isProcessing = activeLoadingAction === 'processing'
   const isUploading = activeLoadingAction === 'uploading'
@@ -153,6 +156,8 @@ function App() {
   const qradarEligibleCount = getQradarEligibleCount(parseResult?.indicators)
   const crowdStrikeExportDisabled = isDefenderExporting || crowdStrikeBlockingEligibleCount === 0
   const qradarExportDisabled = isDefenderExporting || qradarEligibleCount === 0
+  const validDetectedCount = getValidDetectedCount(parseResult)
+  const queryCount = parseResult?.kqlQueries?.length || 0
   const showAnalystPlaybook = shouldShowAnalystPlaybook(parseResult?.indicators)
   const displayedWorkflowPresentation = getWorkflowPresentation(displayedWorkflowMode)
   const additionalInvestigationMessage = displayedWorkflowPresentation.isCrowdStrike
@@ -660,6 +665,11 @@ function App() {
   }
 
   const defenderExportDisabled = !isBackendConnected(backendConnectionState) || isDefenderExporting || !exportState.canExport
+  const hasDefenderQuickExport = displayedWorkflowPresentation.isDefender && exportState.canExport && validDetectedCount > 0
+  const hasCrowdStrikeQuickExport = displayedWorkflowPresentation.isCrowdStrike
+    && (crowdStrikeBlockingEligibleCount > 0 || qradarEligibleCount > 0)
+  const hasQuickExportReady = Boolean(parseResult) && !isProcessingInputs && (hasDefenderQuickExport || hasCrowdStrikeQuickExport)
+  const showFloatingExportBar = hasQuickExportReady && !isControlPanelVisible
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -696,6 +706,41 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [aboutOpen, backendConnectionState, rawText, lookbackDays, campaignName, defaultCategory, iocMetadata, lastSuccessfulParsePayload, lastSuccessfulParseResult, parseResult, workflowMode, crowdStrikeSeverity, crowdStrikeDescription])
+
+  useEffect(() => {
+    const observedElement = controlPanelRef.current
+    if (!observedElement || typeof IntersectionObserver === 'undefined') {
+      setIsControlPanelVisible(true)
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries
+        setIsControlPanelVisible(Boolean(entry?.isIntersecting))
+      },
+      {
+        root: null,
+        threshold: 0.05,
+      },
+    )
+
+    observer.observe(observedElement)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [clearVersion])
+
+  const handleBackToTop = () => {
+    const target = controlPanelRef.current
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   useEffect(() => {
     const resetGlobalFileDrag = () => {
@@ -780,7 +825,7 @@ function App() {
   }, [handleUpload, isGlobalFileDragActive])
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${showFloatingExportBar ? ' app-shell-with-floating-export' : ''}`}>
       <header className="top-header card">
         <div>
           <p className="eyebrow">Built for SOC Operations</p>
@@ -842,6 +887,7 @@ function App() {
         onRegisterOpenFilePicker={(opener) => {
           openFilePickerRef.current = opener
         }}
+        panelRef={controlPanelRef}
       />
 
       <ExportSuccessBanner
@@ -902,6 +948,24 @@ function App() {
       <AppFooter onOpenShortcuts={() => setAboutOpen(true)} />
 
       <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
+
+      <FloatingExportBar
+        visible={showFloatingExportBar}
+        isDefenderMode={displayedWorkflowPresentation.isDefender}
+        totalIndicators={validDetectedCount}
+        queryCount={queryCount}
+        crowdStrikeEligibleCount={crowdStrikeBlockingEligibleCount}
+        qradarEligibleCount={qradarEligibleCount}
+        onDefenderExport={handleDefenderExport}
+        onCrowdStrikeExport={handleCrowdStrikeExport}
+        onQradarExport={handleQradarExport}
+        onBackToTop={handleBackToTop}
+        defenderExportDisabled={defenderExportDisabled}
+        crowdStrikeExportDisabled={crowdStrikeExportDisabled}
+        qradarExportDisabled={qradarExportDisabled}
+        defenderExportLabel="Export Defender CSV"
+        qradarExportLabel="Export QRadar CSV"
+      />
 
       <ToastMessage toast={toast} />
 
