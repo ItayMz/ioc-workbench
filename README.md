@@ -1,187 +1,245 @@
+![Version](https://img.shields.io/badge/version-v1.3.0-blue)
+![React](https://img.shields.io/badge/React-19-61DAFB)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 # IOC Workbench
 
-> A full-stack SOC automation platform that transforms raw threat intelligence into Microsoft Defender IOC imports and ready-to-run Advanced Hunting KQL queries.
+A multi-platform SOC productivity tool for parsing, normalizing, investigating, and exporting Indicators of Compromise (IOCs) across **Microsoft Defender**, **CrowdStrike Falcon**, and **IBM QRadar**.
 
-![Demo](docs/demo.gif)
-
----
-
-# The Problem
-
-SOC analysts regularly receive Indicators of Compromise (IOCs) from customers, vendors, or threat intelligence feeds in inconsistent formats.
-
-Before these indicators can be imported into Microsoft Defender or used for threat hunting, they often require repetitive manual work:
-
-- Cleaning and normalizing IOC data
-- Removing duplicates
-- Identifying IOC types
-- Creating Microsoft Defender IOC CSV files
-- Building Advanced Hunting KQL queries
-- Handling multiple campaigns from a single request
-
-IOC Workbench automates this workflow through a modern browser-based interface while keeping all parsing and business logic inside a FastAPI backend.
+<p align="center">
+  <img src="docs/media/demo.gif" alt="IOC Workbench Demo">
+</p>
 
 ---
 
-# Features
+## Highlights
 
-## IOC Processing
+- Multi-platform IOC workflows
+- Microsoft Defender Advanced Hunting support
+- CrowdStrike Falcon integration
+- IBM QRadar export support
+- React + FastAPI architecture
 
-- Paste raw IOC text
-- Upload one or more CSV/TXT files
-- Drag & Drop file upload
-- Automatic IOC normalization and refanging
+## Overview
+
+IOC Workbench was built to eliminate repetitive manual work performed by SOC analysts when processing customer-provided Indicators of Compromise.
+
+Instead of manually extracting IOCs, cleaning data, generating hunting queries and preparing platform-specific import files, IOC Workbench automates the entire workflow while keeping the analyst in control.
+
+The application supports multiple security platforms and generates investigation queries and export files tailored to each workflow.
+
+---
+
+## Why IOC Workbench?
+
+SOC analysts often receive Indicators of Compromise from customers in inconsistent formats, including emails, CSV files, spreadsheets, and copied text.
+
+Preparing these indicators for investigation typically involves repetitive manual work such as extracting values, removing duplicates, classifying IOC types, generating hunting queries, and creating platform-specific import files.
+
+IOC Workbench streamlines this workflow by automating these repetitive tasks while keeping analysts in control of the investigation and blocking process. The result is a faster, more consistent, and less error-prone workflow across multiple security platforms.
+
+## Architecture Overview
+
+IOC Workbench uses a React frontend and FastAPI backend to transform raw IOC input into platform-specific investigation queries and export files.
+
+![IOC Workbench architecture](docs/architecture/system-overview.svg)
+
+## Features
+
+### IOC Processing
+
+- Free-text IOC extraction
+- CSV support
+- TXT support
+- XLSX support
+- Automatic refanging
+- IOC normalization
+- Automatic IOC classification
 - Duplicate removal
-- IOC type classification
-- Campaign detection from uploaded CSV files
-- Optional manual campaign override
-- Multi-campaign support
-- Detection summary dashboard
+- Multi-file processing
+- IOC accumulation across imports
+- Campaign detection
+- Manual campaign override
 
----
+Supported IOC types:
 
-## Microsoft Defender Export
-
-- Microsoft Defender IOC CSV generation
-- Automatic Title and Description generation
-- Per-campaign metadata support
-- Category detection from uploaded intelligence
-- Optional manual default category
-- Empty ExpirationTime (Never expires)
-- Empty RecommendedActions
-- Ready for Defender import
-
----
-
-## Threat Hunting
-
-Generate Microsoft Defender Advanced Hunting KQL queries for:
-
+- IPv4
+- IPv6
+- Domains
+- URLs
 - MD5
 - SHA1
 - SHA256
+- Sender Email Addresses
+
+---
+
+## Microsoft Defender Workflow
+
+![Microsoft Defender](docs/media/defender-workflow.png)
+
+Features:
+
+- Separate KQL generation per IOC type
+- Adjustable hunting lookback
+- Defender IOC CSV export
+- Campaign-aware metadata
+- Detection summary
+- Indicator preview
+- One-click query copy
+
+---
+
+## CrowdStrike Falcon Workflow
+
+![CrowdStrike Falcon](docs/media/crowdstrike-workflow.png)
+
+Features:
+
+- Advanced Event Search query generation
+- Bulk IOC Blocking CSV export
+- Blocking eligibility summary
+- Configurable severity
+- Configurable description
+- Automatic platform mapping
+- QRadar companion workflow
+
+Supported blocking:
+
 - IPv4
-- Domains
-
-Features include:
-
-- Lookback selector
-- IOC counters
-- Defender table metadata
-- One-click copy
+- MD5
+- SHA256
 
 ---
 
-## User Experience
+## IBM QRadar Workflow
 
-- Modern React dashboard
-- Backend-driven processing
-- Drag & Drop uploads
-- Processing summary cards
-- Loading states
-- Friendly validation messages
-- Collapsible ignored-items panel
-- Clear workflow reset
-- Multi-file upload support
+IOC Workbench can generate QRadar-compatible CSV files containing IPv4 indicators only.
+
+Features:
+
+- Headerless CSV
+- IPv4 filtering
+- One-click export
+- Investigation guidance integration
 
 ---
 
-# Architecture
+## Indicator Classification
 
-```
-                React Frontend
-                       │
-                HTTP REST API
-                       │
-               FastAPI Backend
-                       │
- ┌─────────────────────────────────────┐
- │ Parser                             │
- │ Refang                             │
- │ IOC Classification                 │
- │ Deduplication                      │
- │ Campaign Detection                 │
- │ Category Detection                 │
- │ KQL Builder                        │
- │ Defender CSV Generator             │
- └─────────────────────────────────────┘
-```
+![Indicator Classification](docs/media/indicator-classification.png)
 
-The backend is the **single source of truth** for:
+Indicators are automatically:
 
-- Parsing
-- Validation
-- IOC normalization
-- Refanging
-- Deduplication
-- Campaign handling
-- Category handling
-- KQL generation
-- Defender CSV generation
+- Extracted
+- Refanged
+- Classified
+- Deduplicated
+- Organized by IOC type
+
+Each group supports:
+
+- Expand / Collapse
+- Copy All
+- Original value display
+- Refanged value display
+
+---
+
+## Investigation Guidance
+
+The application provides contextual investigation recommendations.
+
+Examples:
+
+- Continue IP investigations in QRadar
+- Continue Sender Email investigations in Mail Relay / Forcepoint
+- Workflow-specific guidance based on detected IOC types
+
 
 ---
 
 # Tech Stack
 
-### Frontend
+## Frontend
 
 - React
 - Vite
 - JavaScript
+- HTML
+- CSS
+- Vitest
 
-### Backend
+## Backend
 
 - FastAPI
 - Python
-
-### Security
-
-- Microsoft Defender
-- Advanced Hunting KQL
+- Pydantic
+- Pytest
 
 ---
 
 # Project Structure
 
-```
-tsoc-ioc-portal/
-
+```text
+ioc-workbench/
+│
 ├── backend/
-│   └── app/
-│       ├── parser.py
-│       ├── kql_builder.py
-│       ├── defender_csv.py
-│       └── ...
+│   ├── app/
+│   │   ├── exporters/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── main.py
+│   └── tests/
 │
 ├── frontend/
-│   └── src/
-│       ├── components/
-│       ├── services/
-│       └── styles/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── services/
+│   │   └── styles/
+│   ├── public/
+│   └── package.json
 │
 ├── docs/
-│   ├── demo.gif
-│   └── screenshots/
+│   ├── architecture/
+│   │   └── system-overview.svg
+│   └── media/
+│       ├── demo.gif
+│       ├── overview.png
+│       ├── defender-workflow.png
+│       ├── crowdstrike-workflow.png
+│       └── indicator-classification.png
 │
-└── README.md
+├── README.md
+└── .gitignore
 ```
 
 ---
 
-# Installation
+# Getting Started
+
+## Prerequisites
+
+- Python 3.11+
+- Node.js
+- npm
+
+---
 
 ## Backend
 
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+python -m venv .venv
 
-Backend:
+# Windows
+.venv\Scripts\activate
 
-```
-http://localhost:8000
+pip install -r backend/requirements.txt
+
+uvicorn backend.app.main:app --reload
 ```
 
 ---
@@ -190,113 +248,91 @@ http://localhost:8000
 
 ```bash
 cd frontend
+
 npm install
+
 npm run dev
 ```
 
-Frontend:
-
-```
-http://localhost:5173
-```
-
-The frontend reads the backend URL from:
-
-```
-VITE_API_BASE_URL
-```
-
-Default:
-
-```
-http://localhost:8000
-```
-
 ---
 
-# Usage
+## Running Tests
 
-1. Paste IOC text or upload CSV/TXT files.
-2. (Optional) Enter a campaign name.
-3. Select the default Defender category.
-4. Choose a lookback period.
-5. Click **Process IOCs**.
-6. Review:
-   - Detection Summary
-   - Detected Indicators
-   - Generated KQL
-7. Export a Microsoft Defender IOC CSV.
-
----
-
-# Testing
-
-## Backend
+### Backend
 
 ```bash
-cd backend
 pytest
 ```
 
-## Frontend
+### Frontend
 
 ```bash
+cd frontend
+
 npm test
+npm run build
 ```
 
 ---
 
 # Screenshots
 
-## IOC Intake
+## Overview
 
-![IOC Intake](docs/screenshots/home.png)
-
----
-
-## Detection Summary
-
-![Detection Summary](docs/screenshots/detection-summary.png)
+![Overview](docs/media/overview.png)
 
 ---
 
-## KQL Builder
+## Microsoft Defender
 
-![KQL Builder](docs/screenshots/kql-builder.png)
-
----
-
-## Microsoft Defender Export
-
-![Defender Export](docs/screenshots/defender-export.png)
+![Microsoft Defender](docs/media/defender-workflow.png)
 
 ---
 
-# Demo
+## CrowdStrike Falcon
 
-![Demo](docs/demo.gif)
+![CrowdStrike](docs/media/crowdstrike-workflow.png)
+
+---
+
+## IOC Classification
+
+![Classification](docs/media/indicator-classification.png)
+
+---
+
+# Security Notice
+
+IOC Workbench is intended as an analyst productivity tool.
+
+Generated outputs should always be reviewed by a security analyst before being imported into production security platforms.
+
+No customer data is included in this repository.
 
 ---
 
 # Roadmap
 
-Future improvements may include:
+Potential future enhancements:
 
-- VirusTotal integration
-- MISP integration
-- Additional IOC types
-- Additional SIEM/XDR export formats
-- Azure deployment
-- Public hosted version
+- Additional SIEM integrations
+- Additional EDR integrations
+- Threat Intelligence enrichment
+- Optional MISP integration
+- Saved investigation profiles
+- Additional workflow integrations
+- REST API documentation
 
 ---
 
-# Current Release
+## Current Version
 
-**Version:** `v1.0.0`
+**v1.3.0**
 
 ---
 
 # License
 
-MIT License
+This project is licensed under the **MIT License**.
+
+See the [LICENSE](LICENSE) file for details.
