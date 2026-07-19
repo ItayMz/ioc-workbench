@@ -149,9 +149,11 @@ test('App computes floating export bar visibility based on export readiness and 
 
   assert.equal(source.includes('const [isControlPanelVisible, setIsControlPanelVisible] = useState(true)'), true)
   assert.equal(source.includes('const hasQuickExportReady = Boolean(parseResult) && !isProcessingInputs && (hasDefenderQuickExport || hasCrowdStrikeQuickExport)'), true)
+  assert.equal(source.includes('const shouldReserveFloatingExportSpace = hasQuickExportReady'), true)
   assert.equal(source.includes('const showFloatingExportBar = hasQuickExportReady && !isControlPanelVisible'), true)
   assert.equal(source.includes('new IntersectionObserver('), true)
-  assert.equal(source.includes('setIsControlPanelVisible(Boolean(entry?.isIntersecting))'), true)
+  assert.equal(source.includes('setIsControlPanelVisible((current) => (current === nextVisible ? current : nextVisible))'), true)
+  assert.equal(source.includes("rootMargin: '0px 0px -72px 0px'"), true)
   assert.equal(source.includes('observer.observe(observedElement)'), true)
 })
 

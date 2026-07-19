@@ -669,6 +669,7 @@ function App() {
   const hasCrowdStrikeQuickExport = displayedWorkflowPresentation.isCrowdStrike
     && (crowdStrikeBlockingEligibleCount > 0 || qradarEligibleCount > 0)
   const hasQuickExportReady = Boolean(parseResult) && !isProcessingInputs && (hasDefenderQuickExport || hasCrowdStrikeQuickExport)
+  const shouldReserveFloatingExportSpace = hasQuickExportReady
   const showFloatingExportBar = hasQuickExportReady && !isControlPanelVisible
 
   useEffect(() => {
@@ -717,11 +718,13 @@ function App() {
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries
-        setIsControlPanelVisible(Boolean(entry?.isIntersecting))
+        const nextVisible = Boolean(entry?.isIntersecting)
+        setIsControlPanelVisible((current) => (current === nextVisible ? current : nextVisible))
       },
       {
         root: null,
-        threshold: 0.05,
+        rootMargin: '0px 0px -72px 0px',
+        threshold: [0, 0.01],
       },
     )
 
@@ -825,7 +828,7 @@ function App() {
   }, [handleUpload, isGlobalFileDragActive])
 
   return (
-    <div className={`app-shell${showFloatingExportBar ? ' app-shell-with-floating-export' : ''}`}>
+    <div className={`app-shell${shouldReserveFloatingExportSpace ? ' app-shell-with-floating-export' : ''}`}>
       <header className="top-header card">
         <div>
           <p className="eyebrow">Built for SOC Operations</p>

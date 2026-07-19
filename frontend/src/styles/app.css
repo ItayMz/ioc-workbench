@@ -1288,3 +1288,457 @@ button:disabled {
     flex-direction: column;
   }
 }
+
+/* Premium SOC Visual Skin (non-structural override layer) */
+#root,
+.app-shell {
+  position: relative;
+  z-index: 1;
+}
+
+#root::before,
+#root::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.28;
+}
+
+#root::before {
+  left: 0;
+  bottom: 0;
+  width: min(34vw, 430px);
+  height: min(44vh, 360px);
+  background:
+    linear-gradient(180deg, rgba(82, 118, 165, 0.18) 0 1px, transparent 1px 100%),
+    linear-gradient(90deg, rgba(82, 118, 165, 0.11) 0 1px, transparent 1px 100%),
+    linear-gradient(180deg, rgba(28, 205, 222, 0.16) 0 6px, transparent 6px 24px),
+    linear-gradient(180deg, rgba(8, 17, 30, 0) 0%, rgba(8, 17, 30, 0.75) 100%);
+  background-size: 100% 26px, 42px 100%, 100% 100%, 100% 100%;
+  background-position: 0 0, 0 0, 0 0, 0 0;
+  clip-path: polygon(0 100%, 0 38%, 16% 38%, 16% 56%, 30% 56%, 30% 42%, 42% 42%, 42% 62%, 54% 62%, 54% 48%, 68% 48%, 68% 68%, 82% 68%, 82% 58%, 100% 58%, 100% 100%);
+  opacity: 0.16;
+}
+
+#root::after {
+  left: 0;
+  bottom: 0;
+  width: min(44vw, 560px);
+  height: min(36vh, 300px);
+  background:
+    linear-gradient(0deg, rgba(113, 157, 221, 0.2) 0 1px, transparent 1px 100%),
+    linear-gradient(90deg, rgba(113, 157, 221, 0.16) 0 1px, transparent 1px 100%),
+    radial-gradient(circle at 12% 74%, rgba(132, 176, 230, 0.28) 0 1px, transparent 1px),
+    linear-gradient(140deg, rgba(34, 211, 238, 0.14) 0 2px, transparent 2px 100%);
+  background-size: 62px 1px, 1px 62px, 220px 140px, 100% 100%;
+  background-position: 0 calc(100% - 48px), 48px 100%, 0 0, 0 0;
+  clip-path: polygon(0 28%, 72% 16%, 88% 52%, 100% 52%, 100% 100%, 0 100%);
+  opacity: 0.2;
+}
+
+#root .app-shell::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  right: 0;
+  bottom: 0;
+  width: min(38vw, 520px);
+  height: min(34vh, 290px);
+  opacity: 0.2;
+  background:
+    linear-gradient(-90deg, rgba(125, 170, 229, 0.16) 0 1px, transparent 1px 100%),
+    linear-gradient(-180deg, rgba(125, 170, 229, 0.12) 0 1px, transparent 1px 100%),
+    radial-gradient(circle at 82% 82%, rgba(132, 176, 230, 0.24) 0 1px, transparent 1px),
+    linear-gradient(320deg, rgba(96, 165, 250, 0.1) 0 2px, transparent 2px 100%);
+  background-size: 58px 1px, 1px 58px, 260px 170px, 100% 100%;
+  background-position: 100% calc(100% - 42px), calc(100% - 42px) 100%, 0 0, 0 0;
+  clip-path: polygon(42% 22%, 100% 0, 100% 100%, 0 100%);
+}
+
+.app-shell::before {
+  content: '';
+  position: absolute;
+  inset: -3.4rem -2.2rem -2.5rem -2.2rem;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(560px 280px at 20% 8%, rgba(27, 165, 183, 0.12) 0%, rgba(8, 16, 28, 0) 72%),
+    radial-gradient(560px 250px at 84% 84%, rgba(70, 130, 215, 0.09) 0%, rgba(8, 16, 28, 0) 70%),
+    radial-gradient(900px 560px at 50% 52%, rgba(4, 9, 16, 0) 46%, rgba(3, 7, 12, 0.36) 86%);
+}
+
+@media (max-width: 980px) {
+  #root::before {
+    opacity: 0.11;
+  }
+
+  #root::after,
+  #root .app-shell::after {
+    opacity: 0.14;
+  }
+}
+
+@media (max-width: 720px) {
+  #root::before {
+    display: none;
+  }
+
+  #root::after {
+    width: min(62vw, 360px);
+    opacity: 0.1;
+  }
+
+  #root .app-shell::after {
+    width: min(52vw, 300px);
+    height: min(28vh, 220px);
+    opacity: 0.1;
+  }
+
+  .app-shell::before {
+    inset: -2.2rem -1.4rem -1.7rem -1.4rem;
+    background:
+      radial-gradient(420px 190px at 18% 10%, rgba(27, 165, 183, 0.1) 0%, rgba(8, 16, 28, 0) 72%),
+      radial-gradient(420px 190px at 86% 84%, rgba(70, 130, 215, 0.08) 0%, rgba(8, 16, 28, 0) 70%);
+  }
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.28);
+  color: var(--text-strong);
+}
+
+.card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 24%),
+    linear-gradient(160deg, var(--surface-1) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--glow-soft);
+}
+
+.card:hover {
+  border-color: rgba(96, 165, 250, 0.33);
+}
+
+.top-header {
+  border-color: var(--border-strong);
+}
+
+h1 {
+  letter-spacing: 0.02em;
+  color: var(--text-strong);
+}
+
+h2 {
+  color: #d4e9ff;
+}
+
+.section-header {
+  margin-bottom: 0.85rem;
+}
+
+.eyebrow {
+  color: #7cb8d4;
+}
+
+.muted,
+.summary-meta,
+.workflow-note,
+.floating-export-meta,
+.backend-status-description {
+  color: var(--text-dim);
+}
+
+button {
+  border-color: rgba(120, 156, 204, 0.38);
+  background: linear-gradient(180deg, rgba(19, 33, 56, 0.95) 0%, rgba(14, 27, 45, 0.95) 100%);
+  color: #d6ebff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+button:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.72);
+  background: linear-gradient(180deg, rgba(24, 41, 67, 0.98) 0%, rgba(16, 31, 53, 0.98) 100%);
+}
+
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+.indicator-group-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+button.primary {
+  border-color: rgba(34, 197, 94, 0.65);
+  background: linear-gradient(180deg, #14b8a6 0%, #0f9f90 100%);
+  color: #eafffb;
+  box-shadow: 0 8px 18px rgba(8, 100, 96, 0.38), inset 0 1px 0 rgba(190, 252, 242, 0.25);
+}
+
+button.primary:hover:not(:disabled) {
+  border-color: rgba(45, 212, 191, 0.8);
+  background: linear-gradient(180deg, #1bc7b3 0%, #119f91 100%);
+}
+
+button.button-clear {
+  border-color: rgba(248, 113, 113, 0.58);
+  background: linear-gradient(180deg, rgba(90, 22, 30, 0.42) 0%, rgba(60, 18, 22, 0.42) 100%);
+  color: #ffd6d6;
+}
+
+.intake-file-row > button {
+  border-color: rgba(45, 212, 191, 0.52);
+  background: rgba(10, 30, 38, 0.75);
+  color: #b8f7f0;
+}
+
+.workflow-badge-button {
+  border-color: rgba(72, 123, 187, 0.46);
+  background: rgba(14, 24, 40, 0.84);
+}
+
+.workflow-badge-button.active {
+  background: linear-gradient(180deg, rgba(31, 85, 186, 0.66) 0%, rgba(19, 55, 126, 0.7) 100%);
+  border-color: rgba(96, 165, 250, 0.82);
+  box-shadow: inset 0 1px 0 rgba(190, 225, 255, 0.24), 0 10px 20px rgba(8, 20, 48, 0.42);
+}
+
+.workflow-badge-button.active:has(.inline-icon) {
+  color: #ebf6ff;
+}
+
+.ioc-textarea,
+.campaign-input,
+.lookback-select,
+input[type='text'],
+textarea,
+select {
+  border-color: rgba(92, 124, 163, 0.45);
+  background: linear-gradient(180deg, rgba(8, 16, 28, 0.96) 0%, rgba(8, 14, 24, 0.96) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), inset 0 -1px 0 rgba(5, 11, 21, 0.6);
+}
+
+textarea::placeholder,
+input::placeholder {
+  color: #7f97b8;
+}
+
+.summary-item {
+  border-color: rgba(93, 126, 168, 0.36);
+  background: linear-gradient(180deg, rgba(15, 28, 47, 0.78) 0%, rgba(11, 21, 36, 0.8) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 16px rgba(1, 7, 18, 0.35);
+}
+
+.summary-item strong {
+  color: #e7f2ff;
+  font-size: 1.55rem;
+}
+
+.summary-item-total {
+  border-color: rgba(34, 211, 238, 0.44);
+  background: linear-gradient(180deg, rgba(17, 50, 73, 0.58) 0%, rgba(13, 33, 52, 0.56) 100%);
+}
+
+.summary-subsection-header {
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(106, 168, 228, 0.28);
+}
+
+.kql-card,
+.workflow-placeholder-card,
+.playbook-section,
+.upload-summary,
+.additional-investigation-card,
+.error-banner,
+.export-success-banner,
+.floating-export-bar,
+.app-footer,
+.backend-status {
+  border-color: rgba(90, 126, 171, 0.4);
+}
+
+.kql-card h2,
+.workflow-placeholder-card h2 {
+  color: #d4e9ff;
+}
+
+.query-block,
+.sender-email-list,
+.indicator-group-list {
+  background: var(--surface-code);
+  border-color: rgba(92, 125, 164, 0.42);
+  color: #cfe5ff;
+}
+
+.query-block,
+.indicator-group-list,
+.sender-email-list {
+  scrollbar-color: rgba(45, 212, 191, 0.45) rgba(8, 15, 27, 0.9);
+}
+
+.query-block::-webkit-scrollbar-thumb,
+.indicator-group-list::-webkit-scrollbar-thumb,
+.sender-email-list::-webkit-scrollbar-thumb {
+  background: rgba(45, 212, 191, 0.5);
+}
+
+.query-block::-webkit-scrollbar-thumb:hover,
+.indicator-group-list::-webkit-scrollbar-thumb:hover,
+.sender-email-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 212, 191, 0.76);
+}
+
+.chip {
+  background: rgba(17, 29, 47, 0.84);
+  border-color: rgba(92, 124, 164, 0.42);
+  color: #b8d2ee;
+}
+
+.chip-ok {
+  border-color: rgba(52, 211, 153, 0.6);
+  color: #bff8df;
+}
+
+.chip-bad {
+  border-color: rgba(248, 113, 113, 0.66);
+  color: #ffd4d4;
+}
+
+.indicator-mode-toggle {
+  background: rgba(8, 17, 31, 0.76);
+  border-color: rgba(84, 121, 166, 0.4);
+}
+
+.mode-toggle-button.active {
+  border-color: rgba(45, 212, 191, 0.46);
+  background: rgba(19, 82, 90, 0.38);
+  color: #dffff9;
+}
+
+.error-banner {
+  background: linear-gradient(160deg, rgba(89, 26, 32, 0.5) 0%, rgba(62, 21, 26, 0.5) 100%);
+  color: #ffd2d2;
+}
+
+.additional-investigation-card {
+  background: linear-gradient(160deg, rgba(84, 63, 16, 0.38) 0%, rgba(68, 49, 13, 0.34) 100%);
+}
+
+.backend-status-connected {
+  background: linear-gradient(160deg, rgba(18, 89, 65, 0.36) 0%, rgba(8, 59, 46, 0.34) 100%);
+}
+
+.backend-status-checking,
+.backend-status-waking {
+  background: linear-gradient(160deg, rgba(19, 63, 110, 0.4) 0%, rgba(15, 42, 85, 0.34) 100%);
+}
+
+.backend-status-unavailable {
+  background: linear-gradient(160deg, rgba(90, 24, 32, 0.5) 0%, rgba(62, 19, 24, 0.38) 100%);
+}
+
+.floating-export-bar {
+  border-color: rgba(45, 212, 191, 0.45);
+  background: linear-gradient(180deg, rgba(6, 17, 30, 0.9) 0%, rgba(5, 12, 22, 0.88) 100%);
+  box-shadow: 0 14px 26px rgba(1, 6, 16, 0.55), 0 0 0 1px rgba(45, 212, 191, 0.18);
+}
+
+.floating-export-ready {
+  color: #d5f9f4;
+}
+
+.floating-export-back-to-top {
+  border-color: rgba(45, 212, 191, 0.42);
+  color: #a8ede6;
+}
+
+.copy-toast-success {
+  background: linear-gradient(160deg, rgba(13, 92, 74, 0.9) 0%, rgba(10, 64, 57, 0.88) 100%);
+}
+
+.copy-toast-error {
+  background: linear-gradient(160deg, rgba(104, 27, 35, 0.9) 0%, rgba(74, 20, 26, 0.88) 100%);
+}
+
+.footer-link-button {
+  border-color: rgba(45, 212, 191, 0.35);
+  color: #baf5ef;
+}
+
+.about-overlay {
+  background: rgba(3, 9, 18, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.about-dialog {
+  background: linear-gradient(160deg, rgba(10, 19, 34, 0.95) 0%, rgba(8, 14, 27, 0.95) 100%);
+  border-color: rgba(87, 121, 165, 0.42);
+}
+
+
+/* ==========================================================
+   Development-only performance diagnostic modes.
+   Used for isolating rendering bottlenecks.
+   Not referenced by production code.
+   ========================================================== */
+body.perf-no-background {
+  background: #050912;
+}
+
+body.perf-no-background::before,
+body.perf-no-background::after,
+body.perf-no-background #root::before,
+body.perf-no-background #root::after,
+body.perf-no-background .app-shell::before,
+body.perf-no-background .app-shell::after {
+  display: none !important;
+}
+
+body.perf-no-shadows .card,
+body.perf-no-shadows .floating-export-bar,
+body.perf-no-shadows .summary-item,
+body.perf-no-shadows button,
+body.perf-no-shadows .copy-toast,
+body.perf-no-shadows .about-dialog {
+  box-shadow: none !important;
+}
+
+body.perf-no-floating-bar .floating-export-bar {
+  display: none !important;
+}
+
+body.perf-no-floating-bar .app-shell-with-floating-export {
+  padding-bottom: 0 !important;
+}
+
+body.perf-no-transitions *,
+body.perf-no-transitions *::before,
+body.perf-no-transitions *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+body.perf-no-decoration::before,
+body.perf-no-decoration::after,
+body.perf-no-decoration #root::before,
+body.perf-no-decoration #root::after,
+body.perf-no-decoration .app-shell::before,
+body.perf-no-decoration .app-shell::after {
+  display: none !important;
+}
+
+body.perf-simple-code .query-block,
+body.perf-simple-code .indicator-group-list,
+body.perf-simple-code .sender-email-list {
+  background: #060f1c !important;
+  border-color: rgba(92, 125, 164, 0.3) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  scrollbar-color: auto !important;
+  overflow: auto !important;
+  contain: paint;
+}

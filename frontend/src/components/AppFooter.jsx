@@ -11,7 +11,7 @@ function AppFooter({ onOpenShortcuts }) {
       <div className="app-footer-bottom">
         <span>IOC Workbench v1.3</span>
         <button type="button" className="footer-link-button" onClick={onOpenShortcuts}>
-          <Icon name="keyboard" className="inline-icon" /> Keyboard Shortcuts
+          <Icon name="about" className="inline-icon" /> About
         </button>
       </div>
     </footer>
