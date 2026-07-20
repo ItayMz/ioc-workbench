@@ -62,6 +62,12 @@ function Icon({ name, className = '' }) {
           <path d="M12 10v6m0-9h.01" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       )
+    case 'close':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+          <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
     case 'keyboard':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>

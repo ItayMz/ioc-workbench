@@ -277,7 +277,7 @@ function ControlPanel({
             />
           </div>
 
-          <div className="control-row control-row-column">
+          <div className="control-row control-row-column crowdstrike-description-row">
             <label className="field-label" htmlFor="crowdstrikeDescription">Description</label>
             <textarea
               id="crowdstrikeDescription"

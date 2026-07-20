@@ -20,7 +20,9 @@ function AboutDialog({ open, onClose }) {
             <h2 id="aboutTitle"><Icon name="about" className="inline-icon" /> IOC Workbench</h2>
             <p className="muted">Version 1.3</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close About dialog">Close</button>
+          <button type="button" className="about-close-button" onClick={onClose} aria-label="Close">
+            <Icon name="close" className="inline-icon" />
+          </button>
         </div>
 
         <div className="about-section">

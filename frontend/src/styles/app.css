@@ -675,6 +675,10 @@ button:disabled {
   margin-top: 1rem;
 }
 
+.crowdstrike-description-row {
+  margin-top: 1rem;
+}
+
 .crowdstrike-description {
   min-height: 120px;
 }
@@ -1219,6 +1223,16 @@ button:disabled {
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.6rem;
+}
+
+.about-close-button {
+  min-width: 1.7rem;
+  min-height: 1.7rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .about-section {
