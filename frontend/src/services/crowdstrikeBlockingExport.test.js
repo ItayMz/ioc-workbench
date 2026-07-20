@@ -235,16 +235,13 @@ test('no CSV is produced when no eligible blocking indicators exist', () => {
   assert.equal(result, null)
 })
 
-test('filename uses campaign name and falls back to crowdstrike-iocs.csv', () => {
-  assert.equal(buildCrowdStrikeExportFilename('Q3 Campaign'), 'Q3-Campaign-crowdstrike-iocs.csv')
+test('filename is fixed to crowdstrike-iocs.csv', () => {
+  assert.equal(buildCrowdStrikeExportFilename('Q3 Campaign'), 'crowdstrike-iocs.csv')
   assert.equal(buildCrowdStrikeExportFilename(''), 'crowdstrike-iocs.csv')
 })
 
-test('filename invalid characters are sanitized', () => {
-  assert.equal(
-    buildCrowdStrikeExportFilename('Ops:/"Alpha"*<2026>?'),
-    'Ops-Alpha-2026-crowdstrike-iocs.csv',
-  )
+test('filename ignores campaign name sanitization inputs', () => {
+  assert.equal(buildCrowdStrikeExportFilename('Ops:/"Alpha"*<2026>?'), 'crowdstrike-iocs.csv')
 })
 
 test('CSV escaping handles commas quotes and line breaks in description and quotes platforms field', () => {
@@ -281,7 +278,7 @@ test('CrowdStrike CSV export starts with one UTF-8 BOM and header follows immedi
     const result = getResult()
     const expectedHeader = CROWDSTRIKE_BLOCKING_CSV_COLUMNS.join(',')
 
-    assert.equal(exported.filename, 'Q3-Campaign-crowdstrike-iocs.csv')
+    assert.equal(exported.filename, 'crowdstrike-iocs.csv')
     assert.equal(exported.count, 1)
     assert.equal(result.mimeType, 'text/csv;charset=utf-8')
     assert.equal(result.clicked, true)

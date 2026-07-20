@@ -1,5 +1,4 @@
 import { downloadCsvContent } from './downloadFile.js'
-import { buildCampaignExportFilename } from './exportNaming.js'
 
 const QRADAR_FILENAME_SUFFIX = 'qradar-ips.csv'
 const QRADAR_FILENAME_FALLBACK = 'qradar-ips.csv'
@@ -80,8 +79,8 @@ export function buildQradarCsv(indicators) {
   }
 }
 
-export function buildQradarExportFilename(campaignName) {
-  return buildCampaignExportFilename(campaignName, QRADAR_FILENAME_SUFFIX, QRADAR_FILENAME_FALLBACK)
+export function buildQradarExportFilename() {
+  return QRADAR_FILENAME_FALLBACK
 }
 
 export function exportQradarCsv(indicators, { campaignName } = {}) {

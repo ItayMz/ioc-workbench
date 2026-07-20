@@ -114,8 +114,8 @@ test('QRadar export deduplicates values and preserves first-detected ordering', 
   assert.deepEqual(values, ['8.8.8.8', '1.1.1.1', '9.9.9.9'])
 })
 
-test('QRadar filename uses campaign name and supports fallback', () => {
-  assert.equal(buildQradarExportFilename('Q3 Campaign'), 'Q3-Campaign-qradar-ips.csv')
+test('QRadar filename is fixed to qradar-ips.csv', () => {
+  assert.equal(buildQradarExportFilename('Q3 Campaign'), 'qradar-ips.csv')
   assert.equal(buildQradarExportFilename(''), 'qradar-ips.csv')
 })
 
@@ -141,7 +141,7 @@ test('QRadar export download stays BOM-free so the first IP value is unchanged',
     ], { campaignName: 'Q3 Campaign' })
 
     const result = getResult()
-    assert.equal(exported.filename, 'Q3-Campaign-qradar-ips.csv')
+    assert.equal(exported.filename, 'qradar-ips.csv')
     assert.equal(exported.count, 2)
     assert.equal(result.mimeType, 'text/csv;charset=utf-8')
     assert.equal(result.clicked, true)

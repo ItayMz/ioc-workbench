@@ -1,10 +1,9 @@
 from collections import Counter
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.enums.indicator_type import IndicatorType
-from app.exporters.defender_csv import export_campaign_to_csv_bytes
 from app.models.campaign import Campaign, CampaignStatistics
 from app.models.ioc import ParsedIOC
 from app.services.kql_builder import build_kql_queries
@@ -152,24 +151,6 @@ def parse_bulk_iocs(payload: ParseRequest) -> ParseResponse:
         recommended_actions=campaign.recommended_actions,
         summary=summary,
         kqlQueries=kql_queries,
-    )
-
-
-@router.post("/export/csv")
-def export_campaign_csv(payload: ParseRequest) -> Response:
-    indicators = _parse_indicators_from_payload(payload)
-    campaign = build_campaign(payload, indicators)
-    csv_bytes = export_campaign_to_csv_bytes(
-        campaign,
-        ioc_metadata=[row.model_dump() for row in (payload.iocMetadata or [])],
-        manual_campaign_name=_resolve_manual_campaign_name(payload),
-        default_category=payload.defaultCategory,
-    )
-
-    return Response(
-        content=csv_bytes,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=defender_iocs.csv"},
     )
 
 

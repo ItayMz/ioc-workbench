@@ -1,0 +1,185 @@
+{
+  "cases": [
+    {
+      "name": "all-supported-types-and-sender-exclusion",
+      "input": {
+        "campaignName": "Manual Campaign",
+        "defaultCategory": "CommandAndControl",
+        "iocMetadata": [
+          {
+            "value": "hxxps://evil[.]example/path?x=1&y=2",
+            "campaignName": "Campaign Alpha",
+            "category": "C2",
+            "sourceFile": "first.csv"
+          },
+          {
+            "value": "evil.com",
+            "campaignName": "Campaign Alpha",
+            "category": "credential access",
+            "sourceFile": "first.csv"
+          },
+          {
+            "value": "8.8.8.8",
+            "campaignName": "Campaign Alpha",
+            "category": "Execution",
+            "sourceFile": "second.xlsx"
+          },
+          {
+            "value": "d94873ad85946c78543fce6eb38cee78",
+            "campaignName": "Campaign Alpha",
+            "category": "Collection",
+            "sourceFile": "second.xlsx"
+          },
+          {
+            "value": "1d0f8dd934cd975e0b70e1c2d8b1c5b2d438b25d",
+            "campaignName": "Campaign Alpha",
+            "category": "Discovery",
+            "sourceFile": "second.xlsx"
+          },
+          {
+            "value": "a02f124c5ce4180bd130a62ee03262f399c33491de3aed36e0b15155ae4926c0",
+            "campaignName": "Campaign Alpha",
+            "category": "Exfiltration",
+            "sourceFile": "second.xlsx"
+          },
+          {
+            "value": "user@test.com",
+            "campaignName": "Campaign Alpha",
+            "category": "SuspiciousActivity",
+            "sourceFile": "second.xlsx"
+          }
+        ]
+      },
+      "expectedCsv": "IndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,https://evil.example/path?x=1&y=2,,Block,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,CommandAndControl,,True\r\nDomainName,evil.com,,Block,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,CredentialAccess,,True\r\nIpAddress,8.8.8.8,,Block,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Execution,,True\r\nFileMd5,d94873ad85946c78543fce6eb38cee78,,BlockAndRemediate,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Collection,,True\r\nFileSha1,1d0f8dd934cd975e0b70e1c2d8b1c5b2d438b25d,,BlockAndRemediate,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Discovery,,True\r\nFileSha256,a02f124c5ce4180bd130a62ee03262f399c33491de3aed36e0b15155ae4926c0,,BlockAndRemediate,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Exfiltration,,True\r\n",
+      "expectedDownloadTextWithBom": "\ufeffIndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,https://evil.example/path?x=1&y=2,,Block,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,CommandAndControl,,True\r\nDomainName,evil.com,,Block,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,CredentialAccess,,True\r\nIpAddress,8.8.8.8,,Block,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Execution,,True\r\nFileMd5,d94873ad85946c78543fce6eb38cee78,,BlockAndRemediate,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Collection,,True\r\nFileSha1,1d0f8dd934cd975e0b70e1c2d8b1c5b2d438b25d,,BlockAndRemediate,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Discovery,,True\r\nFileSha256,a02f124c5ce4180bd130a62ee03262f399c33491de3aed36e0b15155ae4926c0,,BlockAndRemediate,High,Manual Campaign IOC,Indicators associated with Manual Campaign.,,,Exfiltration,,True\r\n"
+    },
+    {
+      "name": "detected-campaign-and-source-file-fallback",
+      "input": {
+        "campaignName": null,
+        "defaultCategory": null,
+        "iocMetadata": [
+          {
+            "value": "https://first.example/path",
+            "campaignName": "Detected Alpha",
+            "category": "Execution",
+            "sourceFile": "first.csv"
+          },
+          {
+            "value": "second.example",
+            "campaignName": "Detected Alpha",
+            "category": "Discovery",
+            "sourceFile": "second.xlsx"
+          },
+          {
+            "value": "10.10.10.10",
+            "campaignName": null,
+            "category": "CredentialAccess",
+            "sourceFile": "third.txt"
+          }
+        ]
+      },
+      "expectedCsv": "IndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,https://first.example/path,,Block,High,Detected Alpha IOC,Indicators associated with Detected Alpha.,,,Execution,,True\r\nDomainName,second.example,,Block,High,Detected Alpha IOC,Indicators associated with Detected Alpha.,,,Discovery,,True\r\nIpAddress,10.10.10.10,,Block,High,Detected Alpha IOC,Indicators associated with Detected Alpha.,,,CredentialAccess,,True\r\n",
+      "expectedDownloadTextWithBom": "\ufeffIndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,https://first.example/path,,Block,High,Detected Alpha IOC,Indicators associated with Detected Alpha.,,,Execution,,True\r\nDomainName,second.example,,Block,High,Detected Alpha IOC,Indicators associated with Detected Alpha.,,,Discovery,,True\r\nIpAddress,10.10.10.10,,Block,High,Detected Alpha IOC,Indicators associated with Detected Alpha.,,,CredentialAccess,,True\r\n"
+    },
+    {
+      "name": "category-normalization-and-defaults",
+      "input": {
+        "campaignName": null,
+        "defaultCategory": "Ransomware",
+        "iocMetadata": [
+          {
+            "value": "https://alias.example",
+            "campaignName": null,
+            "category": "Command and Control",
+            "sourceFile": "first.csv"
+          },
+          {
+            "value": "198.51.100.7",
+            "campaignName": null,
+            "category": "c2",
+            "sourceFile": "first.csv"
+          },
+          {
+            "value": "abc123def4567890abc123def4567890",
+            "campaignName": null,
+            "category": null,
+            "sourceFile": "second.csv"
+          },
+          {
+            "value": "example.org",
+            "campaignName": null,
+            "category": "UnknownCategory",
+            "sourceFile": "second.csv"
+          }
+        ]
+      },
+      "expectedCsv": "IndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,https://alias.example,,Block,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,CommandAndControl,,True\r\nIpAddress,198.51.100.7,,Block,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,CommandAndControl,,True\r\nFileMd5,abc123def4567890abc123def4567890,,BlockAndRemediate,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,Ransomware,,True\r\nDomainName,example.org,,Block,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,Malware,,True\r\n",
+      "expectedDownloadTextWithBom": "\ufeffIndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,https://alias.example,,Block,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,CommandAndControl,,True\r\nIpAddress,198.51.100.7,,Block,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,CommandAndControl,,True\r\nFileMd5,abc123def4567890abc123def4567890,,BlockAndRemediate,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,Ransomware,,True\r\nDomainName,example.org,,Block,High,General Threat Indicators,Threat indicators manually submitted for blocking and investigation.,,,Malware,,True\r\n"
+    },
+    {
+      "name": "duplicate-indicators-preserved",
+      "input": {
+        "campaignName": "Duplicate Campaign",
+        "defaultCategory": "Malware",
+        "iocMetadata": [
+          {
+            "value": "8.8.8.8",
+            "campaignName": "Duplicate Campaign",
+            "category": "Collection",
+            "sourceFile": "first.csv"
+          },
+          {
+            "value": "8.8.8.8",
+            "campaignName": "Duplicate Campaign",
+            "category": "Collection",
+            "sourceFile": "second.csv"
+          },
+          {
+            "value": "dup.example",
+            "campaignName": "Duplicate Campaign",
+            "category": "Execution",
+            "sourceFile": "first.csv"
+          },
+          {
+            "value": "dup.example",
+            "campaignName": "Duplicate Campaign",
+            "category": "Execution",
+            "sourceFile": "second.csv"
+          }
+        ]
+      },
+      "expectedCsv": "IndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nIpAddress,8.8.8.8,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Collection,,True\r\nIpAddress,8.8.8.8,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Collection,,True\r\nDomainName,dup.example,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Execution,,True\r\nDomainName,dup.example,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Execution,,True\r\n",
+      "expectedDownloadTextWithBom": "\ufeffIndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nIpAddress,8.8.8.8,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Collection,,True\r\nIpAddress,8.8.8.8,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Collection,,True\r\nDomainName,dup.example,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Execution,,True\r\nDomainName,dup.example,,Block,High,Duplicate Campaign IOC,Indicators associated with Duplicate Campaign.,,,Execution,,True\r\n"
+    },
+    {
+      "name": "escaping-unicode-and-newlines",
+      "input": {
+        "campaignName": "Manual, \"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\nLine2",
+        "defaultCategory": null,
+        "iocMetadata": [
+          {
+            "value": "https://example.com/path?query=a,b&quote=\"x\"",
+            "campaignName": "Manual, \"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\nLine2",
+            "category": "Suspicious Activity",
+            "sourceFile": "escaped.csv"
+          },
+          {
+            "value": "\u05e9\u05dc\u05d5\u05dd.example",
+            "campaignName": "Manual, \"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\nLine2",
+            "category": "Execution",
+            "sourceFile": "escaped.csv"
+          },
+          {
+            "value": "line1\nline2",
+            "campaignName": "Manual, \"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\nLine2",
+            "category": "Discovery",
+            "sourceFile": "escaped.csv"
+          }
+        ]
+      },
+      "expectedCsv": "IndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,\"https://example.com/path?query=a,b&quote=\"\"x\"\"\",,Block,High,\"Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2 IOC\",\"Indicators associated with Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2.\",,,SuspiciousActivity,,True\r\nDomainName,\u05e9\u05dc\u05d5\u05dd.example,,Block,High,\"Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2 IOC\",\"Indicators associated with Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2.\",,,Execution,,True\r\nDomainName,\"line1\nline2\",,Block,High,\"Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2 IOC\",\"Indicators associated with Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2.\",,,Discovery,,True\r\n",
+      "expectedDownloadTextWithBom": "\ufeffIndicatorType,IndicatorValue,ExpirationTime,Action,Severity,Title,Description,RecommendedActions,RbacGroups,Category,MitreTechniques,GenerateAlert\r\nUrl,\"https://example.com/path?query=a,b&quote=\"\"x\"\"\",,Block,High,\"Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2 IOC\",\"Indicators associated with Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2.\",,,SuspiciousActivity,,True\r\nDomainName,\u05e9\u05dc\u05d5\u05dd.example,,Block,High,\"Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2 IOC\",\"Indicators associated with Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2.\",,,Execution,,True\r\nDomainName,\"line1\nline2\",,Block,High,\"Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2 IOC\",\"Indicators associated with Manual, \"\"\u05d4\u05e7\u05de\u05e4\u05d9\u05d9\u05df\"\"\nLine2.\",,,Discovery,,True\r\n"
+    }
+  ]
+}

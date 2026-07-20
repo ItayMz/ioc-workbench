@@ -24,11 +24,11 @@ import {
 } from './services/backendHealth.js'
 import {
   checkBackendHealth,
-  exportDefenderCsv,
   parseIocsWithMetadata,
 } from './services/iocApi'
 import { parseUploadedFiles } from './services/uploadParser.js'
 import { DEFAULT_DEFENDER_CATEGORY, normalizeDefaultCategory } from './services/defenderCategories.js'
+import { downloadDefenderCsv } from './services/defenderCsv.js'
 import { getInitialRawText, resolveExportRequest } from './services/exportState'
 import {
   applyLookbackRefreshResult,
@@ -468,9 +468,11 @@ function App() {
     setErrorMessage('')
 
     try {
-      const exported = await exportDefenderCsv({
-        ...payload,
-        defaultCategory: normalizeDefaultCategory(defaultCategory),
+      const exported = downloadDefenderCsv({
+        indicators: parseResult?.indicators,
+        iocMetadata: payload.iocMetadata,
+        campaignName: payload.campaignName,
+        defaultCategory: payload.defaultCategory,
       })
 
       const count = getValidDetectedCount(parseResult)

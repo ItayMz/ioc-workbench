@@ -2,7 +2,6 @@ from io import StringIO
 from pathlib import Path
 import asyncio
 import csv
-import io
 import sys
 
 from fastapi import HTTPException
@@ -11,58 +10,13 @@ from starlette.responses import JSONResponse
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from app.exporters.defender_csv import sanitize_spreadsheet_cell, export_campaign_to_csv_bytes
 from app.main import harden_request_handling
-from app.models.campaign import Campaign
-from app.models.ioc import ParsedIOC
-from app.routes.parse import IOCMetadata, ParseRequest, export_campaign_csv, parse_bulk_iocs
+from app.routes.parse import IOCMetadata, ParseRequest, parse_bulk_iocs
 from app.services.parser import MAX_RAW_TEXT_SIZE_BYTES, MAX_UPLOAD_FILE_SIZE_BYTES, prepare_text_from_upload
 
 
 def _read_csv_bytes(payload: bytes):
     return list(csv.reader(StringIO(payload.decode('utf-8-sig'))))
-
-
-def test_csv_formula_injection_sanitizes_campaign_title_fields():
-    response = export_campaign_csv(
-        ParseRequest(
-            raw_text='https://example.com',
-            campaignName='=Storm',
-            iocMetadata=[IOCMetadata(value='https://example.com', campaignName='=Storm')],
-        )
-    )
-
-    row = list(csv.reader(io.StringIO(response.body.decode('utf-8-sig'))))[1]
-    assert row[5] == "'=Storm IOC"
-
-
-def test_csv_formula_injection_sanitizes_formula_like_indicator_value():
-    campaign = Campaign(
-        indicators=[
-            ParsedIOC(
-                original_value='+calc',
-                refanged_value='+calc',
-                indicator_type='Url',
-                action='Block',
-                severity='High',
-                generate_alert=True,
-                valid=True,
-            )
-        ]
-    )
-
-    rows = _read_csv_bytes(export_campaign_to_csv_bytes(campaign))
-    assert rows[1][1] == "'+calc"
-
-
-def test_csv_formula_injection_sanitizes_formula_like_category_and_description():
-    assert sanitize_spreadsheet_cell('@Description') == "'@Description"
-    assert sanitize_spreadsheet_cell('-Category') == "'-Category"
-
-
-def test_safe_values_remain_unchanged():
-    assert sanitize_spreadsheet_cell('General Threat Indicators') == 'General Threat Indicators'
-    assert sanitize_spreadsheet_cell('https://example.com') == 'https://example.com'
 
 
 def test_oversized_raw_text_is_rejected():

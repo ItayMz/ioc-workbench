@@ -1,5 +1,4 @@
 import { downloadCsvContent } from './downloadFile.js'
-import { buildCampaignExportFilename } from './exportNaming.js'
 
 export const CROWDSTRIKE_BLOCKING_CSV_COLUMNS = [
   'type',
@@ -168,8 +167,8 @@ export function buildCrowdStrikeBlockingCsv(indicators, { severity, description 
   }
 }
 
-export function buildCrowdStrikeExportFilename(campaignName) {
-  return buildCampaignExportFilename(campaignName, CROWDSTRIKE_FILENAME_SUFFIX, CROWDSTRIKE_FILENAME_FALLBACK)
+export function buildCrowdStrikeExportFilename() {
+  return CROWDSTRIKE_FILENAME_FALLBACK
 }
 
 export function exportCrowdStrikeBlockingCsv(indicators, { severity, description, campaignName } = {}) {
