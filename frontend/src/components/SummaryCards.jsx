@@ -7,6 +7,9 @@ function SummaryCards({ summary, exportEligibility = null }) {
     return null
   }
 
+  const crowdStrikeExportCount = exportEligibility?.crowdStrikeBlockingEligible || 0
+  const crowdStrikeExportLabel = crowdStrikeExportCount === 1 ? 'indicator' : 'indicators'
+
   return (
     <section className="card detection-summary" aria-live="polite">
       <div className="section-header">
@@ -46,7 +49,7 @@ function SummaryCards({ summary, exportEligibility = null }) {
           </div>
           <div className="summary-grid">
             <article className="summary-item">
-              <p>CrowdStrike Blocking Eligible</p>
+              <p>CrowdStrike CSV Export</p>
               <strong>{exportEligibility.crowdStrikeBlockingEligible}</strong>
             </article>
             <article className="summary-item">
@@ -55,7 +58,7 @@ function SummaryCards({ summary, exportEligibility = null }) {
             </article>
           </div>
           <p className="muted summary-note">
-            Only IPv4, MD5, and SHA256 indicators are eligible for CrowdStrike blocking. All other indicators are included in the Advanced Event Search query only.
+            The CrowdStrike CSV export will contain {crowdStrikeExportCount} {crowdStrikeExportLabel} (IPv4, MD5, and SHA256 only). All remaining indicators are included in the Advanced Event Search query only.
           </p>
         </>
       )}

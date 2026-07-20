@@ -679,6 +679,49 @@ button:disabled {
   margin-top: 1rem;
 }
 
+.info-message {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(96, 165, 250, 0.38);
+  border-radius: 10px;
+  background: linear-gradient(160deg, rgba(10, 20, 36, 0.82) 0%, rgba(10, 16, 28, 0.68) 100%);
+  color: #d8e9ff;
+}
+
+.defender-export-note-title,
+.defender-export-note-counts {
+  margin: 0;
+}
+
+.defender-export-note-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.defender-export-note-counts {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.defender-export-note-warning {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: linear-gradient(160deg, rgba(120, 53, 15, 0.28) 0%, rgba(74, 29, 14, 0.2) 100%);
+}
+
+.defender-export-note-warning .defender-export-note-title,
+.defender-export-note-warning .inline-icon {
+  color: #fbbf24;
+}
+
+.defender-export-note-warning .defender-export-note-counts {
+  color: #ffffff;
+}
+
 .crowdstrike-description-row {
   margin-top: 1rem;
 }

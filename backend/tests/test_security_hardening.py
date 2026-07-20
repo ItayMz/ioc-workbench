@@ -88,17 +88,24 @@ def test_file_larger_than_5mb_is_rejected():
         raise AssertionError('Expected oversized file to be rejected')
 
 
-def test_more_than_10_uploaded_files_is_rejected():
+def test_more_than_100_uploaded_files_is_rejected():
     metadata = [
         IOCMetadata(value='https://example.com', sourceFile=f'file_{index}.csv')
-        for index in range(11)
+        for index in range(101)
     ]
+
+    accepted_metadata = [
+        IOCMetadata(value='https://example.com', sourceFile=f'file_{index}.csv')
+        for index in range(100)
+    ]
+
+    parse_bulk_iocs(ParseRequest(raw_text='https://example.com', iocMetadata=accepted_metadata))
 
     try:
         parse_bulk_iocs(ParseRequest(raw_text='https://example.com', iocMetadata=metadata))
     except HTTPException as exc:
         assert exc.status_code == 400
-        assert 'maximum of 10 files' in str(exc.detail)
+        assert 'maximum of 100 files' in str(exc.detail)
     else:
         raise AssertionError('Expected too many uploaded files to be rejected')
 

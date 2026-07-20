@@ -383,9 +383,9 @@ test('Detection Summary includes Export Eligibility subsection labels and note',
   const source = readFileSync(summaryCardsPath, 'utf8')
 
   assert.equal(source.includes('Export Eligibility'), true)
-  assert.equal(source.includes('CrowdStrike Blocking Eligible'), true)
+  assert.equal(source.includes('CrowdStrike CSV Export'), true)
   assert.equal(source.includes('QRadar Eligible IPs'), true)
-  assert.equal(source.includes('Only IPv4, MD5, and SHA256 indicators are eligible for CrowdStrike blocking.'), true)
+  assert.equal(source.includes('The CrowdStrike CSV export will contain'), true)
 })
 
 test('App shows query copy toasts and uses export success banner for export confirmations', () => {

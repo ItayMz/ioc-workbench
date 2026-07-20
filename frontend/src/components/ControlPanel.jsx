@@ -10,7 +10,6 @@ function ControlPanel({
   campaignName,
   defaultCategory,
   workflowMode,
-  uploadSummary,
   processingInFlight,
   uploadingInFlight,
   exportInFlight,
@@ -41,6 +40,7 @@ function ControlPanel({
   onCrowdStrikeSeverityChange,
   onCrowdStrikeDescriptionChange,
   crowdStrikeExportDisabled,
+  defenderExportNotice,
   workflowTransitionPhase,
   clearVersion,
   onRegisterOpenFilePicker,
@@ -207,6 +207,15 @@ function ControlPanel({
           </button>
         </div>
 
+        {defenderExportNotice && (
+          <div className="info-message defender-export-note defender-export-note-warning" role="status" aria-live="polite">
+            <p className="defender-export-note-title">
+              <Icon name="info" className="inline-icon" /> {defenderExportNotice.message}
+            </p>
+            <p className="defender-export-note-counts">{defenderExportNotice.countsText}</p>
+          </div>
+        )}
+
         <div className="control-row control-row-column analysis-options-heading-row">
           <label className="field-label analysis-options-label">Analysis Options</label>
         </div>
@@ -295,14 +304,6 @@ function ControlPanel({
           <p className="muted workflow-note">CrowdStrike workflow selected. Defender-specific outputs are hidden.</p>
         )}
       </div>
-
-      {uploadSummary && (
-        <div className="upload-summary" role="status" aria-live="polite">
-          <p><strong>Campaign name detected:</strong> {uploadSummary.detectedCampaignName || 'None'}</p>
-          <p><strong>IOCs extracted:</strong> {uploadSummary.iocsExtracted}</p>
-          {uploadSummary.warning && <p className="summary-warning">{uploadSummary.warning}</p>}
-        </div>
-      )}
 
       <input
         ref={uploadRef}

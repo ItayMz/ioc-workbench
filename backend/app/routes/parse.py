@@ -12,7 +12,7 @@ from app.services.kql_builder import build_kql_queries
 from app.services.parser import parse_bulk_text, validate_raw_text_size
 
 router = APIRouter()
-MAX_UPLOAD_FILES = 10
+MAX_UPLOAD_FILES = 100
 
 
 class IOCMetadata(BaseModel):
@@ -122,7 +122,7 @@ def _validate_payload_limits(payload: ParseRequest) -> None:
     if len(source_files) > MAX_UPLOAD_FILES:
         raise HTTPException(
             status_code=400,
-            detail="Upload exceeds the maximum of 10 files per request.",
+            detail="Upload exceeds the maximum of 100 files per request.",
         )
 
 

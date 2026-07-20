@@ -45,6 +45,7 @@ import {
   getWorkflowPresentation,
   WORKFLOW_MODE,
 } from './services/workflowMode.js'
+import { buildDefenderExportNotice } from './services/defenderExportNotice.js'
 import {
   CROWDSTRIKE_DEFAULT_DESCRIPTION,
   CROWDSTRIKE_DEFAULT_SEVERITY,
@@ -104,7 +105,6 @@ function App() {
   const [campaignName, setCampaignName] = useState('')
   const [defaultCategory, setDefaultCategory] = useState(DEFAULT_DEFENDER_CATEGORY)
   const [detectedCampaignName, setDetectedCampaignName] = useState(null)
-  const [uploadSummary, setUploadSummary] = useState(null)
   const [queuedFiles, setQueuedFiles] = useState([])
   const [sessionManualRawText, setSessionManualRawText] = useState('')
   const [iocMetadata, setIocMetadata] = useState([])
@@ -163,6 +163,10 @@ function App() {
   const additionalInvestigationMessage = displayedWorkflowPresentation.isCrowdStrike
     ? buildAdditionalInvestigationMessage(parseResult?.indicators)
     : null
+  const defenderExportNotice = buildDefenderExportNotice({
+    workflowMode: displayedWorkflowPresentation.mode,
+    indicators: parseResult?.indicators,
+  })
   const playbook = buildAnalystPlaybook({
     workflowMode: displayedWorkflowPresentation.mode,
     indicators: parseResult?.indicators,
@@ -433,12 +437,6 @@ function App() {
         .filter(Boolean)
 
       setQueuedFiles(nextQueuedFiles)
-      setUploadSummary({
-        filesUploaded: nextQueuedFiles.length,
-        iocsExtracted: totalUploadedIocs,
-        detectedCampaignName: candidateCampaigns[0] || null,
-        warning: null,
-      })
       setDetectedCampaignName(candidateCampaigns[0] || null)
       setIocMetadata(nextPayload.iocMetadata || [])
       setLastSuccessfulParsePayload(nextPayload)
@@ -539,7 +537,6 @@ function App() {
     setCampaignName('')
     setDefaultCategory(DEFAULT_DEFENDER_CATEGORY)
     setDetectedCampaignName(null)
-    setUploadSummary(null)
     setQueuedFiles([])
     setIocMetadata([])
     setLastSuccessfulParsePayload(null)
@@ -575,7 +572,6 @@ function App() {
       setLastSuccessfulParsePayload(null)
       setLastSuccessfulParseResult(null)
       setIocMetadata([])
-      setUploadSummary(null)
       return
     }
 
@@ -595,18 +591,6 @@ function App() {
       setLastSuccessfulParsePayload(nextPayload)
       setLastSuccessfulParseResult(nextResult)
       setIocMetadata(nextPayload.iocMetadata || [])
-      setUploadSummary((current) => {
-        if (!current) {
-          return null
-        }
-
-        const nextIocCount = nextQueuedFiles.reduce((acc, entry) => acc + entry.rawText.split(/\r?\n/).filter(Boolean).length, 0)
-        return {
-          ...current,
-          filesUploaded: nextQueuedFiles.length,
-          iocsExtracted: nextIocCount,
-        }
-      })
     } catch (error) {
       setErrorMessage(error.message)
     } finally {
@@ -854,7 +838,6 @@ function App() {
         campaignName={campaignName}
         defaultCategory={defaultCategory}
         workflowMode={workflowMode}
-        uploadSummary={uploadSummary}
         processingInFlight={isProcessing}
         uploadingInFlight={isUploading}
         exportInFlight={isDefenderExporting}
@@ -885,6 +868,7 @@ function App() {
         onCrowdStrikeSeverityChange={handleCrowdStrikeSeverityChange}
         onCrowdStrikeDescriptionChange={setCrowdStrikeDescription}
         crowdStrikeExportDisabled={crowdStrikeExportDisabled}
+        defenderExportNotice={defenderExportNotice}
         workflowTransitionPhase={workflowTransitionPhase}
         clearVersion={clearVersion}
         onRegisterOpenFilePicker={(opener) => {
