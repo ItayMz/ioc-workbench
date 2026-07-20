@@ -185,11 +185,11 @@ function ControlPanel({
       <div className={`workflow-transition-shell workflow-transition-${workflowTransitionPhase}`}>
         <div className="button-row intake-primary-action">
           <button className="primary intake-main-action-button" type="button" onClick={onProcess} disabled={backendActionsDisabled}>
-            {processingInFlight ? 'Processing...' : 'Process IOCs'}
+            {processingInFlight ? 'Analyzing IOCs...' : 'Analyze IOCs'}
           </button>
           {showDefenderControls && (
             <button type="button" onClick={onExport} disabled={exportDisabled}>
-              <Icon name="export" className="inline-icon" /> {exportInFlight ? 'Generating export...' : exportButtonLabel}
+              <Icon name="export" className="inline-icon" /> {exportInFlight ? 'Exporting CSV...' : exportButtonLabel}
             </button>
           )}
           {!showDefenderControls && (

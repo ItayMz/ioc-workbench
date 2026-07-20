@@ -7,7 +7,10 @@ from app.routes.parse import router as parse_router
 MAX_REQUEST_SIZE_BYTES = 20 * 1024 * 1024
 CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 
-app = FastAPI(title="TSOC IOC Automation Portal")
+app = FastAPI(
+    title="IOC Workbench",
+    description="IOC parsing, hunting query generation and export toolkit",
+)
 app.include_router(parse_router)
 
 app.add_middleware(

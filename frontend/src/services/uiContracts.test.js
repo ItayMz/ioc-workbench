@@ -75,12 +75,12 @@ test('workflow selector uses badge buttons for Microsoft Defender and CrowdStrik
   assert.equal(source.includes('workflowModeSelect'), false)
 })
 
-test('Control panel places Process IOCs action in the intake section', () => {
+test('Control panel places Analyze IOCs action in the intake section', () => {
   const source = readFileSync(controlPanelPath, 'utf8')
 
   assert.equal(source.includes('className="button-row intake-primary-action"'), true)
   assert.equal(source.includes('sticky-action-bar'), false)
-  assert.equal(source.includes("{processingInFlight ? 'Processing...' : 'Process IOCs'}"), true)
+  assert.equal(source.includes("{processingInFlight ? 'Analyzing IOCs...' : 'Analyze IOCs'}"), true)
   assert.equal(source.includes('onClick={onProcess}'), true)
   assert.equal(source.includes('onClick={onExport}'), true)
   assert.equal(source.includes('onClick={onCrowdStrikeExport}'), true)
@@ -487,7 +487,7 @@ test('Control panel only disables controls related to processing and upload oper
   assert.equal(source.includes('const isProcessingInputs = processingInFlight || uploadingInFlight'), true)
   assert.equal(source.includes('disabled={isProcessingInputs}'), true)
   assert.equal(source.includes('disabled={backendActionsDisabled}'), true)
-  assert.equal(source.includes("{processingInFlight ? 'Processing...' : 'Process IOCs'}"), true)
+  assert.equal(source.includes("{processingInFlight ? 'Analyzing IOCs...' : 'Analyze IOCs'}"), true)
   assert.equal(source.includes('Paste IOC text or drag and drop CSV, XLSX, or TXT files onto the text area.'), true)
   assert.equal(source.includes('Drag and drop CSV, XLSX, or TXT files directly onto the IOC text area.'), false)
   assert.equal(source.includes('Total uploaded size:'), false)

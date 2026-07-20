@@ -367,7 +367,7 @@ function App() {
     }
 
     setActiveLoadingAction('uploading')
-    setActiveLoadingMessage('Processing files...')
+    setActiveLoadingMessage('Analyzing IOCs...')
     setErrorMessage('')
 
     try {
@@ -466,7 +466,7 @@ function App() {
     }
 
     setActiveLoadingAction('defender-export')
-    setActiveLoadingMessage('Generating export...')
+    setActiveLoadingMessage('Exporting CSV...')
     setErrorMessage('')
 
     try {
