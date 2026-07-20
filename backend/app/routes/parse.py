@@ -5,7 +5,6 @@ from pydantic import BaseModel
 
 from app.enums.indicator_type import IndicatorType
 from app.exporters.defender_csv import export_campaign_to_csv_bytes
-from app.exporters.defender_excel import export_campaign_to_excel_bytes
 from app.models.campaign import Campaign, CampaignStatistics
 from app.models.ioc import ParsedIOC
 from app.services.kql_builder import build_kql_queries
@@ -153,19 +152,6 @@ def parse_bulk_iocs(payload: ParseRequest) -> ParseResponse:
         recommended_actions=campaign.recommended_actions,
         summary=summary,
         kqlQueries=kql_queries,
-    )
-
-
-@router.post("/export/excel")
-def export_campaign_excel(payload: ParseRequest) -> Response:
-    indicators = _parse_indicators_from_payload(payload)
-    campaign = build_campaign(payload, indicators)
-    workbook_bytes = export_campaign_to_excel_bytes(campaign)
-
-    return Response(
-        content=workbook_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=defender_iocs.xlsx"},
     )
 
 
