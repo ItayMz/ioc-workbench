@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEFENDER_CATEGORY_OPTIONS } from '../services/defenderCategories.js'
 import { WORKFLOW_MODE } from '../services/workflowMode.js'
 import Icon from './Icon.jsx'
@@ -31,7 +31,6 @@ function ControlPanel({
   exportDisabled,
   secondaryExportButtonLabel,
   secondaryExportDisabled,
-  hasAccumulatedResult,
   backendConnected,
   backendActionsDisabled,
   showDefenderControls,
@@ -50,13 +49,13 @@ function ControlPanel({
   const [isDragOver, setIsDragOver] = useState(false)
   const isProcessingInputs = processingInFlight || uploadingInFlight
 
-  const openFilePicker = () => {
+  const openFilePicker = useCallback(() => {
     if (backendActionsDisabled) {
       return
     }
 
     uploadRef.current?.click()
-  }
+  }, [backendActionsDisabled])
 
   useEffect(() => {
     setIsDragOver(false)
@@ -68,7 +67,7 @@ function ControlPanel({
     return () => {
       onRegisterOpenFilePicker?.(null)
     }
-  }, [onRegisterOpenFilePicker, backendActionsDisabled])
+  }, [onRegisterOpenFilePicker, openFilePicker])
 
   const onFilePicked = async (event) => {
     const files = Array.from(event.target.files || [])

@@ -6,18 +6,16 @@ import Icon from './Icon.jsx'
 const KQL_COPY_RESET_MS = 1800
 
 function KqlCards({ queries, onQueryCopied }) {
-  if (!queries) {
-    return null
-  }
-
-  const queryCards = getVisibleKqlCards(queries)
   const [copiedByCard, setCopiedByCard] = useState({})
   const copyResetTimersRef = useRef({})
+  const queryCards = queries ? getVisibleKqlCards(queries) : []
 
-  useEffect(() => () => {
-    Object.values(copyResetTimersRef.current).forEach((timerId) => {
-      clearTimeout(timerId)
-    })
+  useEffect(() => {
+    const timers = copyResetTimersRef.current
+
+    return () => {
+      Object.values(timers).forEach(clearTimeout)
+    }
   }, [])
 
   if (!queryCards.length) {

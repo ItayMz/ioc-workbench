@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import AboutDialog from './components/AboutDialog'
 import AdditionalInvestigationCard from './components/AdditionalInvestigationCard'
 import AppFooter from './components/AppFooter'
@@ -179,7 +179,7 @@ function App() {
     },
   })
 
-  const onBackendStateChange = (nextState) => {
+  const onBackendStateChange = useCallback((nextState) => {
     if (!isMountedRef.current) {
       return
     }
@@ -203,12 +203,12 @@ function App() {
     }
 
     setShowConnectedBanner(true)
-  }
+  }, [])
 
-  const runHealthCheck = () => waitForBackendAvailability({
+  const runHealthCheck = useCallback(() => waitForBackendAvailability({
     checkBackendHealth,
     onStateChange: onBackendStateChange,
-  })
+  }), [onBackendStateChange])
 
   const showSuccessToast = (message) => {
     if (toastHideTimerRef.current) {
@@ -285,7 +285,7 @@ function App() {
         clearTimeout(workflowTransitionTimerRef.current)
       }
     }
-  }, [])
+  }, [runHealthCheck])
 
   useEffect(() => {
     if (workflowMode === displayedWorkflowMode) {
@@ -303,7 +303,7 @@ function App() {
     }, WORKFLOW_TRANSITION_MS)
   }, [workflowMode, displayedWorkflowMode])
 
-  const buildCombinedPayload = ({ nextManualRawText, nextQueuedFiles }) => {
+  const buildCombinedPayload = useCallback(({ nextManualRawText, nextQueuedFiles }) => {
     const combinedRawText = [nextManualRawText, ...nextQueuedFiles.map((fileEntry) => fileEntry.rawText)]
       .map((value) => String(value || '').trim())
       .filter(Boolean)
@@ -318,9 +318,9 @@ function App() {
       defaultCategory: normalizeDefaultCategory(defaultCategory),
       iocMetadata: combinedMetadata.length ? combinedMetadata : null,
     }
-  }
+  }, [lookbackDays, campaignName, defaultCategory])
 
-  const handleProcess = async () => {
+  const handleProcess = useCallback(async () => {
     if (!isBackendConnected(backendConnectionState)) {
       setErrorMessage('Backend is currently unavailable. Please try again shortly.')
       return
@@ -362,9 +362,9 @@ function App() {
       setActiveLoadingAction(null)
       setActiveLoadingMessage('')
     }
-  }
+  }, [backendConnectionState, buildCombinedPayload, onBackendStateChange, queuedFiles, rawText, sessionManualRawText])
 
-  const handleUpload = async (files) => {
+  const handleUpload = useCallback(async (files) => {
     if (!isBackendConnected(backendConnectionState)) {
       setErrorMessage('Backend is currently unavailable. Please try again shortly.')
       return
@@ -431,7 +431,6 @@ function App() {
         },
       )
 
-      const totalUploadedIocs = nextFileEntries.reduce((acc, entry) => acc + entry.rawText.split(/\r?\n/).filter(Boolean).length, 0)
       const candidateCampaigns = nextQueuedFiles
         .map((entry) => entry.detectedCampaignName)
         .filter(Boolean)
@@ -449,7 +448,7 @@ function App() {
       setActiveLoadingAction(null)
       setActiveLoadingMessage('')
     }
-  }
+  }, [backendConnectionState, buildCombinedPayload, onBackendStateChange, queuedFiles, sessionManualRawText])
 
   const handleDefenderExport = async () => {
     if (!isBackendConnected(backendConnectionState)) {
@@ -692,7 +691,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [aboutOpen, backendConnectionState, rawText, lookbackDays, campaignName, defaultCategory, iocMetadata, lastSuccessfulParsePayload, lastSuccessfulParseResult, parseResult, workflowMode, crowdStrikeSeverity, crowdStrikeDescription])
+  }, [aboutOpen, backendConnectionState, rawText, lookbackDays, campaignName, defaultCategory, iocMetadata, lastSuccessfulParsePayload, lastSuccessfulParseResult, parseResult, workflowMode, crowdStrikeSeverity, crowdStrikeDescription, handleProcess])
 
   useEffect(() => {
     const observedElement = controlPanelRef.current
@@ -861,7 +860,6 @@ function App() {
         exportDisabled={defenderExportDisabled}
         secondaryExportButtonLabel="Export QRadar CSV"
         secondaryExportDisabled={qradarExportDisabled}
-        hasAccumulatedResult={Boolean(lastSuccessfulParseResult)}
         backendConnected={isBackendConnected(backendConnectionState)}
         backendActionsDisabled={backendActionsDisabled}
         showDefenderControls={displayedWorkflowPresentation.isDefender}

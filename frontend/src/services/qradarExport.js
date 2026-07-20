@@ -1,6 +1,5 @@
 import { downloadCsvContent } from './downloadFile.js'
 
-const QRADAR_FILENAME_SUFFIX = 'qradar-ips.csv'
 const QRADAR_FILENAME_FALLBACK = 'qradar-ips.csv'
 
 function normalizeRawType(indicatorType) {
@@ -83,13 +82,13 @@ export function buildQradarExportFilename() {
   return QRADAR_FILENAME_FALLBACK
 }
 
-export function exportQradarCsv(indicators, { campaignName } = {}) {
+export function exportQradarCsv(indicators, { campaignName: _campaignName } = {}) {
   const exportData = buildQradarCsv(indicators)
   if (!exportData) {
     return null
   }
 
-  const filename = buildQradarExportFilename(campaignName)
+  const filename = buildQradarExportFilename()
   downloadCsvContent(exportData.csv, filename)
 
   return {

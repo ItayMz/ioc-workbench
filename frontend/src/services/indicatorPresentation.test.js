@@ -4,7 +4,6 @@ import test from 'node:test'
 import {
   buildCopyAllPayload,
   buildGroupCopyPayload,
-  DEFAULT_EXPANDED_GROUP_LABEL,
   DETECTED_EMPTY_MESSAGE,
   getCopyAllSuccessMessage,
   getGroupCopySuccessMessage,

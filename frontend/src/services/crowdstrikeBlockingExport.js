@@ -15,7 +15,6 @@ export const CROWDSTRIKE_BLOCKING_FIXED_PLATFORMS = 'windows,mac,linux'
 export const CROWDSTRIKE_BLOCKING_FIXED_APPLIED_GLOBALLY = 'TRUE'
 export const CROWDSTRIKE_DEFAULT_SEVERITY = 'high'
 export const CROWDSTRIKE_DEFAULT_DESCRIPTION = 'Sent by the customer via email'
-const CROWDSTRIKE_FILENAME_SUFFIX = 'crowdstrike-iocs.csv'
 const CROWDSTRIKE_FILENAME_FALLBACK = 'crowdstrike-iocs.csv'
 
 const SEVERITY_VALUES = new Set(['high', 'medium'])
@@ -171,13 +170,13 @@ export function buildCrowdStrikeExportFilename() {
   return CROWDSTRIKE_FILENAME_FALLBACK
 }
 
-export function exportCrowdStrikeBlockingCsv(indicators, { severity, description, campaignName } = {}) {
+export function exportCrowdStrikeBlockingCsv(indicators, { severity, description, campaignName: _campaignName } = {}) {
   const exportData = buildCrowdStrikeBlockingCsv(indicators, { severity, description })
   if (!exportData) {
     return null
   }
 
-  const filename = buildCrowdStrikeExportFilename(campaignName)
+  const filename = buildCrowdStrikeExportFilename()
   downloadCsvContent(exportData.csv, filename, { includeUtf8Bom: true })
 
   return {

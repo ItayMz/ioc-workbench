@@ -181,7 +181,7 @@ function extractIocCandidatesFromText(value) {
   const candidates = []
   const tokens = text
     .split(/[\s,;|]+/)
-    .map((token) => token.trim().replace(/^[()\[\]{}:;,'"]+|[()\[\]{}:;,'"]+$/g, ''))
+    .map((token) => token.trim().replace(/^[()[\]{}:;,'"]+|[()[\]{}:;,'"]+$/g, ''))
     .filter(Boolean)
 
   for (const token of tokens) {

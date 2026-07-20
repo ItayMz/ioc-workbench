@@ -1,7 +1,8 @@
 function sanitizeCampaignName(name) {
   return String(name || '')
     .trim()
-    .replace(/[\\/:*?"<>|\x00-\x1f]/g, '-')
+    .replace(/[/:*?"<>|]/g, '-')
+    .replace(/[\p{Cc}]/gu, '-')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^[-. ]+|[-. ]+$/g, '')

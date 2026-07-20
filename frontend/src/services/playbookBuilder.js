@@ -47,7 +47,7 @@ export function shouldShowAnalystPlaybook(indicators) {
   return getValidDetectedIndicators(indicators).length > 0
 }
 
-export function buildAnalystPlaybook({ workflowMode, indicators, generatedOutputs = {} }) {
+export function buildAnalystPlaybook({ workflowMode, indicators, generatedOutputs: _generatedOutputs = {} }) {
   if (!shouldShowAnalystPlaybook(indicators)) {
     return {
       title: 'Next Investigation Steps',

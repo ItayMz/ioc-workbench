@@ -91,7 +91,7 @@ export function syncExpandedGroups(currentExpandedGroups, groups) {
 export function toggleGroupExpanded(expandedGroups, groupLabel) {
   return {
     ...expandedGroups,
-    [groupLabel]: !Boolean(expandedGroups?.[groupLabel]),
+    [groupLabel]: !expandedGroups?.[groupLabel],
   }
 }
 
