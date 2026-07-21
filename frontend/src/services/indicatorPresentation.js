@@ -4,7 +4,6 @@ export const INDICATOR_DISPLAY_MODE = {
   REFANGED: 'refanged',
   ORIGINAL: 'original',
 }
-export const DEFAULT_EXPANDED_GROUP_LABEL = null
 
 export const INDICATOR_WORKFLOW_MODE = {
   DEFENDER: 'defender',

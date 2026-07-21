@@ -1,8 +1,6 @@
 from pathlib import Path
 import sys
 
-import pytest
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.regex.patterns import REFANG_PATTERNS
