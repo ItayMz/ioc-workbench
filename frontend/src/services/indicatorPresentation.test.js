@@ -2,18 +2,20 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
-  buildCopyAllPayload,
+  buildHandlingCopyPayload,
   buildGroupCopyPayload,
   DETECTED_EMPTY_MESSAGE,
-  getCopyAllSuccessMessage,
+  getHandlingCopySuccessMessage,
   getGroupCopySuccessMessage,
   getDetectedIndicators,
   getInitialExpandedGroups,
   getIndicatorDisplayValue,
+  INDICATOR_WORKFLOW_MODE,
   INDICATOR_COPY_ERROR_MESSAGE,
   groupDetectedIndicatorsByType,
   getGroupValues,
   INDICATOR_DISPLAY_MODE,
+  splitIndicatorGroupsByHandling,
   syncExpandedGroups,
   toggleGroupExpanded,
 } from './indicatorPresentation.js'
@@ -157,7 +159,7 @@ test('group value resolution and per-group copy respect display mode', () => {
   assert.equal(buildGroupCopyPayload(group, INDICATOR_DISPLAY_MODE.REFANGED), 'example.com\nmail.example.com')
 })
 
-test('Copy All payload preserves group and IOC ordering, skips empty groups, and respects mode', () => {
+test('workflow clipboard payload for Defender preserves group and IOC ordering and respects mode', () => {
   const groups = [
     {
       label: 'Domains',
@@ -174,22 +176,71 @@ test('Copy All payload preserves group and IOC ordering, skips empty groups, and
     },
     {
       label: 'MD5',
-      items: [],
+      items: [
+        { original_value: 'orig-md5', refanged_value: 'ref-md5' },
+      ],
+    },
+    {
+      label: 'Sender Email Addresses',
+      items: [
+        { original_value: 'user@example.com', refanged_value: 'user@example.com' },
+      ],
     },
   ]
 
   assert.equal(
-    buildCopyAllPayload(groups, INDICATOR_DISPLAY_MODE.REFANGED),
-    'Domains (2):\n\na.com\nb.com\n\nSHA256 (1):\n\nref-hash',
+    buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.REFANGED, INDICATOR_WORKFLOW_MODE.DEFENDER, 'handledByUs'),
+    'a.com\nb.com\nref-hash\nref-md5',
   )
   assert.equal(
-    buildCopyAllPayload(groups, INDICATOR_DISPLAY_MODE.ORIGINAL),
-    'Domains (2):\n\na[.]com\nb[.]com\n\nSHA256 (1):\n\norig-hash',
+    buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.ORIGINAL, INDICATOR_WORKFLOW_MODE.DEFENDER, 'handledByUs'),
+    'a[.]com\nb[.]com\norig-hash\norig-md5',
+  )
+  assert.equal(
+    buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.ORIGINAL, INDICATOR_WORKFLOW_MODE.DEFENDER, 'customerAction'),
+    'user@example.com',
+  )
+})
+
+test('CrowdStrike clipboard grouping excludes SHA1 from handled and customer buckets', () => {
+  const groups = [
+    {
+      label: 'SHA1',
+      items: [
+        { original_value: 'sha1-orig', refanged_value: 'sha1-ref' },
+      ],
+    },
+    {
+      label: 'SHA256',
+      items: [
+        { original_value: 'sha256-orig', refanged_value: 'sha256-ref' },
+      ],
+    },
+    {
+      label: 'URLs',
+      items: [
+        { original_value: 'hxxps://x[.]com', refanged_value: 'https://x.com' },
+      ],
+    },
+  ]
+
+  const split = splitIndicatorGroupsByHandling(groups, INDICATOR_WORKFLOW_MODE.CROWDSTRIKE)
+  assert.deepEqual(split.handledByUs.map((group) => group.label), ['SHA256'])
+  assert.deepEqual(split.customerAction.map((group) => group.label), ['URLs'])
+  assert.deepEqual(split.investigationOnly.map((group) => group.label), ['SHA1'])
+
+  assert.equal(
+    buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.REFANGED, INDICATOR_WORKFLOW_MODE.CROWDSTRIKE, 'handledByUs'),
+    'sha256-ref',
+  )
+  assert.equal(
+    buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.ORIGINAL, INDICATOR_WORKFLOW_MODE.CROWDSTRIKE, 'customerAction'),
+    'hxxps://x[.]com',
   )
 })
 
 test('toast messages use required copy success and failure phrasing', () => {
-  assert.equal(getCopyAllSuccessMessage(280), 'Copied 280 indicators to clipboard.')
+  assert.equal(getHandlingCopySuccessMessage(280, 'Handled by Us'), 'Copied 280 indicators for Handled by Us.')
   assert.equal(getGroupCopySuccessMessage('Domains', 165), 'Copied 165 Domains.')
   assert.equal(INDICATOR_COPY_ERROR_MESSAGE, 'Unable to copy indicators. Please try again.')
 })
@@ -220,7 +271,7 @@ test('ignored items are excluded from grouped copy output and valid ordering is 
   const grouped = groupDetectedIndicatorsByType(detected)
   assert.equal(grouped.length, 1)
   assert.equal(
-    buildCopyAllPayload(grouped, INDICATOR_DISPLAY_MODE.REFANGED),
-    'Domains (2):\n\na.com\nb.com',
+    buildHandlingCopyPayload(grouped, INDICATOR_DISPLAY_MODE.REFANGED, INDICATOR_WORKFLOW_MODE.CROWDSTRIKE, 'customerAction'),
+    'a.com\nb.com',
   )
 })

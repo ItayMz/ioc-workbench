@@ -18,12 +18,14 @@ const summaryCardsPath = resolve(process.cwd(), 'src/components/SummaryCards.jsx
 const appStylesPath = resolve(process.cwd(), 'src/styles/app.css')
 const analystPlaybookPath = resolve(process.cwd(), 'src/components/AnalystPlaybook.jsx')
 
-test('Detected Indicators controls keep expected wrapper classes for aligned toggle and Copy All layout', () => {
+test('Detected Indicators controls keep expected wrapper classes for split clipboard actions', () => {
   const componentSource = readFileSync(indicatorResultsPath, 'utf8')
 
   assert.equal(componentSource.includes('className="indicator-controls"'), true)
   assert.equal(componentSource.includes('className="indicator-mode-toggle"'), true)
   assert.equal(componentSource.includes('className="copy-all-button"'), true)
+  assert.equal(componentSource.includes('Copy IOCs Handled by Us'), true)
+  assert.equal(componentSource.includes('Copy IOCs for Customer Action'), true)
 })
 
 test('responsive control wrapper styles exist for clean wrapping on mobile', () => {
@@ -170,6 +172,7 @@ test('App shows Detected Indicators as a shared workflow-independent section onl
   assert.equal(source.includes('{showIndicatorResults && ('), true)
   assert.equal(source.includes('<IndicatorResults'), true)
   assert.equal(source.includes('indicators={parseResult.indicators}'), true)
+  assert.equal(source.includes('workflowMode={displayedWorkflowPresentation.mode}'), true)
   assert.equal(source.includes('{workflowPresentation.isDefender && <IndicatorResults indicators={parseResult.indicators} />}'), false)
 })
 
@@ -275,8 +278,10 @@ test('Detected Indicators render order stays between Detection Summary and workf
 test('Indicator copy affordances remain available', () => {
   const source = readFileSync(indicatorResultsPath, 'utf8')
 
-  assert.equal(source.includes('Copy All'), true)
-  assert.equal(source.includes('onClick={copyAllIndicators}'), true)
+  assert.equal(source.includes('Copy IOCs Handled by Us'), true)
+  assert.equal(source.includes('Copy IOCs for Customer Action'), true)
+  assert.equal(source.includes('onClick={copyHandledByUsIndicators}'), true)
+  assert.equal(source.includes('onClick={copyCustomerActionIndicators}'), true)
   assert.equal(source.includes('onClick={() => copySingleGroup(group)}'), true)
 })
 

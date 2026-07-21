@@ -47,7 +47,6 @@ import {
 } from './services/workflowMode.js'
 import { buildDefenderExportNotice } from './services/defenderExportNotice.js'
 import {
-  CROWDSTRIKE_DEFAULT_DESCRIPTION,
   CROWDSTRIKE_DEFAULT_SEVERITY,
   exportCrowdStrikeBlockingCsv,
   getCrowdStrikeBlockingEligibleCount,
@@ -95,6 +94,15 @@ function getValidDetectedCount(parseData) {
   return (parseData?.indicators || []).filter((indicator) => indicator?.valid).length
 }
 
+function getInitialCrowdStrikeDescription() {
+  const now = new Date()
+  const day = now.getDate()
+  const month = now.getMonth() + 1
+  const year = String(now.getFullYear()).slice(-2)
+
+  return `מזהים ${day}.${month}.${year}`
+}
+
 function App() {
   const [activeLoadingMessage, setActiveLoadingMessage] = useState('')
   const [activeLoadingAction, setActiveLoadingAction] = useState(null)
@@ -116,7 +124,7 @@ function App() {
   const [isLookbackRefreshing, setIsLookbackRefreshing] = useState(false)
   const [workflowMode, setWorkflowMode] = useState(WORKFLOW_MODE.DEFENDER)
   const [crowdStrikeSeverity, setCrowdStrikeSeverity] = useState(CROWDSTRIKE_DEFAULT_SEVERITY)
-  const [crowdStrikeDescription, setCrowdStrikeDescription] = useState(CROWDSTRIKE_DEFAULT_DESCRIPTION)
+  const [crowdStrikeDescription, setCrowdStrikeDescription] = useState(() => getInitialCrowdStrikeDescription())
   const [toast, setToast] = useState(null)
   const [exportSuccessBanner, setExportSuccessBanner] = useState(null)
   const [isExportBannerClosing, setIsExportBannerClosing] = useState(false)
@@ -545,7 +553,6 @@ function App() {
     lookbackRefreshInFlightRef.current = false
     setIsLookbackRefreshing(false)
     setCrowdStrikeSeverity(CROWDSTRIKE_DEFAULT_SEVERITY)
-    setCrowdStrikeDescription(CROWDSTRIKE_DEFAULT_DESCRIPTION)
     setWorkflowMode(WORKFLOW_MODE.DEFENDER)
     setDisplayedWorkflowMode(WORKFLOW_MODE.DEFENDER)
     setWorkflowTransitionPhase('in')
@@ -903,6 +910,7 @@ function App() {
           {showIndicatorResults && (
             <IndicatorResults
               indicators={parseResult.indicators}
+              workflowMode={displayedWorkflowPresentation.mode}
               onIocListCopied={() => {
                 showSuccessToast('✓ IOC list copied')
               }}

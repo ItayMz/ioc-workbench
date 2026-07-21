@@ -6,6 +6,16 @@ export const INDICATOR_DISPLAY_MODE = {
 }
 export const DEFAULT_EXPANDED_GROUP_LABEL = null
 
+export const INDICATOR_WORKFLOW_MODE = {
+  DEFENDER: 'defender',
+  CROWDSTRIKE: 'crowdstrike',
+}
+
+const DEFENDER_HANDLED_LABELS = new Set(['IPv4', 'IPv6', 'Domains', 'URLs', 'MD5', 'SHA1', 'SHA256'])
+const DEFENDER_CUSTOMER_LABELS = new Set(['Sender Email Addresses'])
+const CROWDSTRIKE_HANDLED_LABELS = new Set(['IPv4', 'MD5', 'SHA256'])
+const CROWDSTRIKE_CUSTOMER_LABELS = new Set(['Domains', 'URLs', 'Sender Email Addresses'])
+
 const GROUP_DEFINITIONS = [
   { label: 'MD5', types: ['filemd5', 'md5'] },
   { label: 'SHA1', types: ['filesha1', 'sha1'] },
@@ -99,27 +109,65 @@ export function buildGroupCopyPayload(group, mode) {
   return getGroupValues(group, mode).join('\n')
 }
 
-export function buildCopyAllPayload(groups, mode) {
-  const sections = []
+function getWorkflowLabelRules(workflowMode) {
+  if (workflowMode === INDICATOR_WORKFLOW_MODE.CROWDSTRIKE) {
+    return {
+      handled: CROWDSTRIKE_HANDLED_LABELS,
+      customer: CROWDSTRIKE_CUSTOMER_LABELS,
+    }
+  }
+
+  return {
+    handled: DEFENDER_HANDLED_LABELS,
+    customer: DEFENDER_CUSTOMER_LABELS,
+  }
+}
+
+export function splitIndicatorGroupsByHandling(groups, workflowMode = INDICATOR_WORKFLOW_MODE.DEFENDER) {
+  const { handled, customer } = getWorkflowLabelRules(workflowMode)
+  const handledByUs = []
+  const customerAction = []
+  const investigationOnly = []
 
   for (const group of groups || []) {
-    const values = getGroupValues(group, mode)
-    if (!values.length) {
+    if (handled.has(group.label)) {
+      handledByUs.push(group)
       continue
     }
 
-    sections.push(`${group.label} (${values.length}):\n\n${values.join('\n')}`)
+    if (customer.has(group.label)) {
+      customerAction.push(group)
+      continue
+    }
+
+    investigationOnly.push(group)
   }
 
-  return sections.join('\n\n')
+  return {
+    handledByUs,
+    customerAction,
+    investigationOnly,
+  }
+}
+
+export function buildHandlingCopyPayload(groups, mode, workflowMode, target) {
+  const split = splitIndicatorGroupsByHandling(groups, workflowMode)
+  const sourceGroups = target === 'customerAction' ? split.customerAction : split.handledByUs
+  const values = []
+
+  for (const group of sourceGroups) {
+    values.push(...getGroupValues(group, mode))
+  }
+
+  return values.filter(Boolean).join('\n')
 }
 
 export function getGroupCopySuccessMessage(groupLabel, count) {
   return `Copied ${count} ${groupLabel}.`
 }
 
-export function getCopyAllSuccessMessage(totalCount) {
-  return `Copied ${totalCount} indicators to clipboard.`
+export function getHandlingCopySuccessMessage(totalCount, handlingLabel) {
+  return `Copied ${totalCount} indicators for ${handlingLabel}.`
 }
 
 export function groupDetectedIndicatorsByType(detectedIndicators) {

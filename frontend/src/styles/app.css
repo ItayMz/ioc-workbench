@@ -1013,6 +1013,41 @@ button:disabled {
 .indicator-empty-state {
   margin: 0.25rem 0 0;
 }
+
+.indicator-subsection-header {
+  margin-top: 1rem;
+}
+
+.ioc-handling-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.indicator-handling-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(9, 17, 32, 0.55);
+  padding: 0.65rem;
+}
+
+.indicator-handling-header {
+  margin-bottom: 0.45rem;
+}
+
+.indicator-handling-list {
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--muted);
+}
+
+.indicator-handling-list li {
+  margin: 0.2rem 0;
+}
+
+.indicator-investigation-note {
+  margin: 0.7rem 0 0;
+}
 .export-summary-card {
   animation: summary-fade-in 220ms ease-out;
 }
@@ -1420,6 +1455,10 @@ button:disabled {
   }
 
   .indicator-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ioc-handling-grid {
     grid-template-columns: 1fr;
   }
 

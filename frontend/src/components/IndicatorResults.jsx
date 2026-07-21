@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  buildCopyAllPayload,
+  buildHandlingCopyPayload,
   buildGroupCopyPayload,
   DETECTED_EMPTY_MESSAGE,
-  getCopyAllSuccessMessage,
+  getHandlingCopySuccessMessage,
   getGroupCopySuccessMessage,
   getDetectedIndicators,
   getInitialExpandedGroups,
   getIndicatorDisplayValue,
+  INDICATOR_WORKFLOW_MODE,
   INDICATOR_COPY_ERROR_MESSAGE,
   groupDetectedIndicatorsByType,
+  splitIndicatorGroupsByHandling,
   INDICATOR_DISPLAY_MODE,
   syncExpandedGroups,
   toggleGroupExpanded,
@@ -24,10 +26,10 @@ function toGroupElementId(label) {
   return `group-${String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 }
 
-function IndicatorResults({ indicators, onIocListCopied }) {
+function IndicatorResults({ indicators, workflowMode = INDICATOR_WORKFLOW_MODE.DEFENDER, onIocListCopied }) {
   const detected = useMemo(() => getDetectedIndicators(indicators), [indicators])
   const groupedIndicators = useMemo(() => groupDetectedIndicatorsByType(detected), [detected])
-  const [displayMode, setDisplayMode] = useState(INDICATOR_DISPLAY_MODE.REFANGED)
+  const [displayMode, setDisplayMode] = useState(INDICATOR_DISPLAY_MODE.ORIGINAL)
   const [expandedGroups, setExpandedGroups] = useState(() => getInitialExpandedGroups(groupedIndicators))
   const [copyToast, setCopyToast] = useState(null)
   const [largePanelPresence, setLargePanelPresence] = useState({})
@@ -212,8 +214,17 @@ function IndicatorResults({ indicators, onIocListCopied }) {
     }
   }
 
-  const copyAllIndicators = async () => {
-    const payload = buildCopyAllPayload(groupedIndicators, displayMode)
+  const {
+    handledByUs: handledByUsGroups,
+    customerAction: customerActionGroups,
+    investigationOnly: investigationOnlyGroups,
+  } = splitIndicatorGroupsByHandling(groupedIndicators, workflowMode)
+  const handledByUsCount = handledByUsGroups.reduce((acc, group) => acc + group.items.length, 0)
+  const customerActionCount = customerActionGroups.reduce((acc, group) => acc + group.items.length, 0)
+  const investigationOnlyCount = investigationOnlyGroups.reduce((acc, group) => acc + group.items.length, 0)
+
+  const copyHandledByUsIndicators = async () => {
+    const payload = buildHandlingCopyPayload(groupedIndicators, displayMode, workflowMode, 'handledByUs')
     const copied = await copyText(payload)
 
     if (!copied) {
@@ -222,7 +233,20 @@ function IndicatorResults({ indicators, onIocListCopied }) {
     }
 
     onIocListCopied?.()
-    showToast(getCopyAllSuccessMessage(groupedCount), 'success')
+    showToast(getHandlingCopySuccessMessage(handledByUsCount, 'Handled by Us'), 'success')
+  }
+
+  const copyCustomerActionIndicators = async () => {
+    const payload = buildHandlingCopyPayload(groupedIndicators, displayMode, workflowMode, 'customerAction')
+    const copied = await copyText(payload)
+
+    if (!copied) {
+      showToast(INDICATOR_COPY_ERROR_MESSAGE, 'error')
+      return
+    }
+
+    onIocListCopied?.()
+    showToast(getHandlingCopySuccessMessage(customerActionCount, 'Customer Action Required'), 'success')
   }
 
   const copySingleGroup = async (group) => {
@@ -265,8 +289,11 @@ function IndicatorResults({ indicators, onIocListCopied }) {
           </button>
         </div>
 
-        <button type="button" className="copy-all-button" onClick={copyAllIndicators} disabled={!groupedCount}>
-          <Icon name="copy" className="inline-icon" /> Copy All
+        <button type="button" className="copy-all-button" onClick={copyHandledByUsIndicators} disabled={!handledByUsCount}>
+          <Icon name="copy" className="inline-icon" /> Copy IOCs Handled by Us
+        </button>
+        <button type="button" className="copy-all-button" onClick={copyCustomerActionIndicators} disabled={!customerActionCount}>
+          <Icon name="copy" className="inline-icon" /> Copy IOCs for Customer Action
         </button>
       </div>
 
@@ -328,6 +355,53 @@ function IndicatorResults({ indicators, onIocListCopied }) {
         </div>
       ) : (
         <p className="muted indicator-empty-state">{DETECTED_EMPTY_MESSAGE}</p>
+      )}
+
+      <div className="section-header indicator-subsection-header">
+        <h2>IOC Handling</h2>
+      </div>
+      <div className="ioc-handling-grid">
+        <section className="indicator-handling-card">
+          <div className="section-header indicator-handling-header">
+            <h3>Handled by Us</h3>
+            <span className="chip">{handledByUsCount} indicators</span>
+          </div>
+          {handledByUsGroups.length ? (
+            <ul className="indicator-handling-list">
+              {handledByUsGroups.map((group) => (
+                <li key={`handled-${group.label}`}>
+                  <strong>{group.label}:</strong> {group.items.length}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">None for the selected workflow.</p>
+          )}
+        </section>
+
+        <section className="indicator-handling-card">
+          <div className="section-header indicator-handling-header">
+            <h3>Customer Action Required</h3>
+            <span className="chip">{customerActionCount} indicators</span>
+          </div>
+          {customerActionGroups.length ? (
+            <ul className="indicator-handling-list">
+              {customerActionGroups.map((group) => (
+                <li key={`customer-${group.label}`}>
+                  <strong>{group.label}:</strong> {group.items.length}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">None for the selected workflow.</p>
+          )}
+        </section>
+      </div>
+
+      {investigationOnlyCount > 0 && (
+        <p className="muted indicator-investigation-note">
+          Investigation/search only: {investigationOnlyGroups.map((group) => `${group.label} (${group.items.length})`).join(', ')}.
+        </p>
       )}
 
       {copyToast && (
