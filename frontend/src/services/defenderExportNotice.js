@@ -17,10 +17,10 @@ function countDefenderExportableIndicators(indicators) {
 
 function formatNoticeMessage(emailCount) {
   if (emailCount === 1) {
-    return '1 sender email indicator was detected but is not included in the Defender CSV export because sender email addresses are not supported for Defender IOC import.'
+    return '1 sender email indicator was detected. Use the Sender Email KQL sweep query for investigation; sender email blocking is not included in the Defender CSV export.'
   }
 
-  return `${emailCount} email indicators were detected but will not be included in the Defender CSV export because sender email addresses are not supported for Defender IOC import.`
+  return `${emailCount} sender email indicators were detected. Use the Sender Email KQL sweep query for investigation; sender email blocking is not included in the Defender CSV export.`
 }
 
 export function buildDefenderExportNotice({ workflowMode, indicators } = {}) {

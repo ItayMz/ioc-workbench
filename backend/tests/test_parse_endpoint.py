@@ -108,18 +108,31 @@ def test_parse_endpoint_mixed_csv_xlsx_metadata_preserves_campaign_and_kql_outpu
     assert response.kqlQueries["fileHash"] is None
     assert response.kqlQueries["ip"] is not None
     assert response.kqlQueries["urlWebDomain"] is not None
+    assert response.kqlQueries["senderEmail"] is not None
 
 
-def test_parse_endpoint_sender_emails_generate_url_web_domain_query():
+def test_parse_endpoint_sender_emails_generate_dedicated_sender_email_query():
     response = parse_bulk_iocs(ParseRequest(raw_text="user@test.com analyst@test.com"))
 
     assert response.valid_count == 2
     assert response.counts_by_type == {"SenderEmailAddress": 2}
     assert response.kqlQueries["fileHash"] is None
     assert response.kqlQueries["ip"] is None
+    assert response.kqlQueries["urlWebDomain"] is None
+    assert response.kqlQueries["senderEmail"] is not None
+    assert response.kqlQueries["senderEmail"]["query"].startswith("EmailEvents")
+    assert 'SenderFromAddress contains "user@test.com"' in response.kqlQueries["senderEmail"]["query"]
+    assert 'SenderFromAddress contains "analyst@test.com"' in response.kqlQueries["senderEmail"]["query"]
+
+
+def test_parse_endpoint_sender_email_is_excluded_from_url_web_domain_query():
+    response = parse_bulk_iocs(ParseRequest(raw_text="https://evil.com user@test.com"))
+
     assert response.kqlQueries["urlWebDomain"] is not None
-    assert 'Url contains "user@test.com"' in response.kqlQueries["urlWebDomain"]["query"]
-    assert 'Url contains "analyst@test.com"' in response.kqlQueries["urlWebDomain"]["query"]
+    assert 'Url contains "https://evil.com"' in response.kqlQueries["urlWebDomain"]["query"]
+    assert 'user@test.com' not in response.kqlQueries["urlWebDomain"]["query"]
+    assert response.kqlQueries["senderEmail"] is not None
+    assert 'SenderFromAddress contains "user@test.com"' in response.kqlQueries["senderEmail"]["query"]
 
 def test_parse_endpoint_returns_correct_actions_for_hashes_and_urls():
     response = parse_bulk_iocs(
@@ -159,13 +172,14 @@ def test_parse_endpoint_includes_kql_queries_with_existing_ioc_output():
     assert response.indicators[0].indicator_type is IndicatorType.URL
     assert response.kqlQueries["urlWebDomain"] is not None
     assert response.kqlQueries["fileHash"] is None
+    assert response.kqlQueries["senderEmail"] is None
     assert response.kqlQueries["urlWebDomain"]["query"].startswith("EmailUrlInfo")
 
 
 def test_parse_endpoint_kql_queries_contract_uses_only_official_keys():
     response = parse_bulk_iocs(ParseRequest(raw_text="https://example.com 8.8.8.8 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 
-    assert set(response.kqlQueries.keys()) == {"fileHash", "ip", "urlWebDomain"}
+    assert set(response.kqlQueries.keys()) == {"fileHash", "ip", "urlWebDomain", "senderEmail"}
 
     legacy_keys = {"md5", "sha1", "sha256", "ipv4", "ipv6", "domains", "urls"}
     assert legacy_keys.isdisjoint(response.kqlQueries.keys())
@@ -245,6 +259,7 @@ def test_parse_endpoint_handles_empty_text_input_gracefully():
     assert response.invalid_count == 0
     assert response.indicators == []
     assert response.kqlQueries["urlWebDomain"] is None
+    assert response.kqlQueries["senderEmail"] is None
 
 
 def test_parse_endpoint_raises_clear_error_for_malformed_upload_payload():

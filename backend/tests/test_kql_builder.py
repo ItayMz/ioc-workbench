@@ -100,9 +100,11 @@ def test_url_web_domain_query_combines_domains_urls_with_contains_on_official_ta
     assert queries["urlWebDomain"]["tables"] == ["EmailUrlInfo", "DeviceNetworkEvents"]
 
 
-def test_url_web_domain_query_includes_sender_email_indicators_in_existing_emailurlinfo_query():
+def test_url_web_domain_query_excludes_sender_email_indicators():
     queries = build_kql_queries(
         {
+            "domains": [_ioc("evil[.]com", IndicatorType.DOMAIN_NAME)],
+            "urls": [_ioc("hxxps://evil[.]com/login", IndicatorType.URL)],
             "senderEmailAddresses": [
                 _ioc("analyst@test.com", IndicatorType.SENDER_EMAIL_ADDRESS),
             ],
@@ -111,38 +113,58 @@ def test_url_web_domain_query_includes_sender_email_indicators_in_existing_email
 
     query = queries["urlWebDomain"]["query"]
     assert query is not None
-    assert "EmailUrlInfo" in query
-    assert '| where Url contains "analyst@test.com"' in query
-    assert '| where RemoteUrl contains "analyst@test.com"' in query or 'RemoteUrl contains "analyst@test.com"' in query
-    assert queries["urlWebDomain"]["count"] == 1
+    assert 'Url contains "evil.com"' in query
+    assert 'RemoteUrl contains "evil.com"' in query
+    assert 'Url contains "https://evil.com/login"' in query
+    assert 'RemoteUrl contains "https://evil.com/login"' in query
+    assert 'analyst@test.com' not in query
+    assert queries["urlWebDomain"]["count"] == 2
 
 
-def test_url_web_domain_query_deduplicates_sender_email_values():
+def test_sender_email_query_uses_email_events_contains_or_and_deduplicates_in_stable_order():
     queries = build_kql_queries(
         {
             "senderEmailAddresses": [
                 _ioc("Analyst@Test.com", IndicatorType.SENDER_EMAIL_ADDRESS),
                 _ioc("analyst@test.com", IndicatorType.SENDER_EMAIL_ADDRESS),
+                _ioc("user2@example.com", IndicatorType.SENDER_EMAIL_ADDRESS),
                 _ioc("analyst@test.com", IndicatorType.SENDER_EMAIL_ADDRESS),
             ],
         }
     )
 
-    query = queries["urlWebDomain"]["query"]
+    query = queries["senderEmail"]["query"]
     assert query is not None
-    assert '\n| where Url contains "analyst@test.com"' in query
-    assert '\n    or RemoteUrl contains "analyst@test.com"' in query
+    assert query.startswith("EmailEvents")
+    assert "| where Timestamp >= ago(90d)" in query
+    assert 'SenderFromAddress contains "analyst@test.com"' in query
+    assert 'SenderFromAddress contains "user2@example.com"' in query
+    assert "\n    or " in query
     assert 'Analyst@Test.com' not in query
-    assert queries["urlWebDomain"]["count"] == 1
+    assert query.count('SenderFromAddress contains "analyst@test.com"') == 1
+    assert query.endswith("| limit 10")
+    assert queries["senderEmail"]["count"] == 2
+    assert queries["senderEmail"]["tables"] == ["EmailEvents"]
+
+
+def test_sender_email_query_is_null_when_no_sender_email_indicators_exist():
+    queries = build_kql_queries(
+        {
+            "domains": [_ioc("evil[.]com", IndicatorType.DOMAIN_NAME)],
+        }
+    )
+
+    assert queries["senderEmail"] is None
 
 
 def test_only_three_official_query_types_are_returned_and_empty_categories_are_not_generated():
     queries = build_kql_queries({"md5": [_ioc("abc", IndicatorType.FILE_MD5)]})
 
-    assert set(queries.keys()) == {"fileHash", "ip", "urlWebDomain"}
+    assert set(queries.keys()) == {"fileHash", "ip", "urlWebDomain", "senderEmail"}
     assert queries["fileHash"] is not None
     assert queries["ip"] is None
     assert queries["urlWebDomain"] is None
+    assert queries["senderEmail"] is None
 
 
 def test_lookback_is_preserved_and_invalid_lookback_defaults_to_90_days():
@@ -168,3 +190,5 @@ def test_no_unrestricted_search_operator_is_generated_for_any_query_type():
         query = queries[key]["query"]
         assert query is not None
         assert "search" not in query.lower()
+
+    assert queries["senderEmail"] is None

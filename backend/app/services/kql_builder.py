@@ -102,6 +102,25 @@ def _build_url_domain_query(values: list[str], lookback_days: int) -> str | None
     )
 
 
+def _build_sender_email_query(values: list[str], lookback_days: int) -> str | None:
+    normalized_values = _deduplicate([value for value in values if value])
+    if not normalized_values:
+        return None
+
+    conditions = [
+        f'SenderFromAddress contains "{_escape_kql_string(value)}"'
+        for value in normalized_values
+    ]
+    where_clause = "\n    or ".join(conditions)
+
+    return (
+        "EmailEvents\n"
+        f"| where Timestamp >= ago({lookback_days}d)\n"
+        f"| where {where_clause}\n"
+        "| limit 10"
+    )
+
+
 def build_kql_queries(grouped_iocs: dict[str, list[ParsedIOC]], lookback_days: int | None = None) -> dict[str, dict[str, object] | None]:
     resolved_lookback_days = _normalize_lookback_days(lookback_days)
     md5_values = [
@@ -146,7 +165,8 @@ def build_kql_queries(grouped_iocs: dict[str, list[ParsedIOC]], lookback_days: i
     ]
     file_hash_values = _deduplicate([*md5_values, *sha1_values, *sha256_values])
     ip_values = _deduplicate([*ipv4_values, *ipv6_values])
-    url_domain_values = _deduplicate([*domain_values, *url_values, *sender_email_values])
+    url_domain_values = _deduplicate([*domain_values, *url_values])
+    sender_email_query_values = _deduplicate(sender_email_values)
 
     queries = {
         "fileHash": {
@@ -201,6 +221,12 @@ def build_kql_queries(grouped_iocs: dict[str, list[ParsedIOC]], lookback_days: i
             "count": len(url_domain_values),
             "lookbackDays": resolved_lookback_days,
             "tables": ["EmailUrlInfo", "DeviceNetworkEvents"],
+        },
+        "senderEmail": {
+            "query": _build_sender_email_query(sender_email_query_values, resolved_lookback_days),
+            "count": len(sender_email_query_values),
+            "lookbackDays": resolved_lookback_days,
+            "tables": ["EmailEvents"],
         },
     }
 

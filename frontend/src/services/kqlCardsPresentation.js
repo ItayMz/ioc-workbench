@@ -2,6 +2,7 @@ const OFFICIAL_KQL_CARD_CONFIG = [
   { key: 'fileHash', title: 'File Hash Query' },
   { key: 'ip', title: 'IP Query' },
   { key: 'urlWebDomain', title: 'URL / Web Domain Query' },
+  { key: 'senderEmail', title: 'Sender Email Query' },
 ]
 
 export function getVisibleKqlCards(queries) {

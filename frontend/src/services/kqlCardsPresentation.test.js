@@ -52,13 +52,54 @@ test('URL / Web Domain Query combines domains and URLs and keeps official table 
   assert.deepEqual(cards[0].tables, ['EmailUrlInfo', 'DeviceNetworkEvents'])
 })
 
+test('Sender Email card is rendered only when dedicated senderEmail query exists', () => {
+  const withSenderCard = getVisibleKqlCards({
+    senderEmail: {
+      query: 'EmailEvents\n| where SenderFromAddress contains "user@example.com"',
+      count: 1,
+      lookbackDays: 90,
+      tables: ['EmailEvents'],
+    },
+  })
+
+  assert.deepEqual(withSenderCard.map((card) => card.title), ['Sender Email'])
+  assert.deepEqual(withSenderCard[0].tables, ['EmailEvents'])
+
+  const withoutSenderCard = getVisibleKqlCards({
+    senderEmail: null,
+  })
+
+  assert.deepEqual(withoutSenderCard, [])
+})
+
+test('URL / Web Domain card does not contain sender email values when senderEmail query exists', () => {
+  const cards = getVisibleKqlCards({
+    urlWebDomain: {
+      query: 'EmailUrlInfo\n| union DeviceNetworkEvents\n| where Url contains "evil.com"\n    or RemoteUrl contains "evil.com"',
+      count: 1,
+      lookbackDays: 30,
+      tables: ['EmailUrlInfo', 'DeviceNetworkEvents'],
+    },
+    senderEmail: {
+      query: 'EmailEvents\n| where SenderFromAddress contains "user@example.com"',
+      count: 1,
+      lookbackDays: 30,
+      tables: ['EmailEvents'],
+    },
+  })
+
+  const urlCard = cards.find((card) => card.key === 'urlWebDomain')
+  assert.equal(urlCard?.query.includes('user@example.com'), false)
+})
+
 test('only official query cards are surfaced and empty cards are omitted', () => {
   const cards = getVisibleKqlCards({
     fileHash: null,
     ip: { query: 'ip query', count: 1, lookbackDays: 90, tables: ['DeviceNetworkEvents'] },
     urlWebDomain: { query: 'url query', count: 1, lookbackDays: 90, tables: ['EmailUrlInfo', 'DeviceNetworkEvents'] },
+    senderEmail: { query: 'sender query', count: 1, lookbackDays: 90, tables: ['EmailEvents'] },
     urls: { query: 'legacy urls query' },
   })
 
-  assert.deepEqual(cards.map((card) => card.key), ['ip', 'urlWebDomain'])
+  assert.deepEqual(cards.map((card) => card.key), ['ip', 'urlWebDomain', 'senderEmail'])
 })
