@@ -190,15 +190,15 @@ test('workflow clipboard payload for Defender preserves group and IOC ordering a
 
   assert.equal(
     buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.REFANGED, INDICATOR_WORKFLOW_MODE.DEFENDER, 'handledByUs'),
-    'a.com\nb.com\nref-hash\nref-md5',
+    'Domains (2):\n\na.com\nb.com\n\nSHA256 (1):\n\nref-hash\n\nMD5 (1):\n\nref-md5',
   )
   assert.equal(
     buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.ORIGINAL, INDICATOR_WORKFLOW_MODE.DEFENDER, 'handledByUs'),
-    'a[.]com\nb[.]com\norig-hash\norig-md5',
+    'Domains (2):\n\na[.]com\nb[.]com\n\nSHA256 (1):\n\norig-hash\n\nMD5 (1):\n\norig-md5',
   )
   assert.equal(
     buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.ORIGINAL, INDICATOR_WORKFLOW_MODE.DEFENDER, 'customerAction'),
-    'user@example.com',
+    'Sender Email Addresses (1):\n\nuser@example.com',
   )
 })
 
@@ -231,12 +231,48 @@ test('CrowdStrike clipboard grouping excludes SHA1 from handled and customer buc
 
   assert.equal(
     buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.REFANGED, INDICATOR_WORKFLOW_MODE.CROWDSTRIKE, 'handledByUs'),
-    'sha256-ref',
+    'SHA256 (1):\n\nsha256-ref',
   )
   assert.equal(
     buildHandlingCopyPayload(groups, INDICATOR_DISPLAY_MODE.ORIGINAL, INDICATOR_WORKFLOW_MODE.CROWDSTRIKE, 'customerAction'),
-    'hxxps://x[.]com',
+    'URLs (1):\n\nhxxps://x[.]com',
   )
+})
+
+test('workflow clipboard payload uses one blank line after each header and between groups while omitting empty-value groups', () => {
+  const groups = [
+    {
+      label: 'MD5',
+      items: [
+        { original_value: 'a-md5', refanged_value: 'a-md5' },
+        { original_value: 'b-md5', refanged_value: 'b-md5' },
+      ],
+    },
+    {
+      label: 'URLs',
+      items: [
+        { original_value: '', refanged_value: '' },
+      ],
+    },
+    {
+      label: 'SHA256',
+      items: [
+        { original_value: 'sha256-a', refanged_value: 'sha256-a' },
+      ],
+    },
+  ]
+
+  const payload = buildHandlingCopyPayload(
+    groups,
+    INDICATOR_DISPLAY_MODE.REFANGED,
+    INDICATOR_WORKFLOW_MODE.DEFENDER,
+    'handledByUs',
+  )
+
+  assert.equal(payload, 'MD5 (2):\n\na-md5\nb-md5\n\nSHA256 (1):\n\nsha256-a')
+  assert.equal(payload.includes('MD5 (2):\n\na-md5'), true)
+  assert.equal(payload.includes('b-md5\n\nSHA256 (1):'), true)
+  assert.equal(payload.endsWith('\n'), false)
 })
 
 test('toast messages use required copy success and failure phrasing', () => {
@@ -272,6 +308,6 @@ test('ignored items are excluded from grouped copy output and valid ordering is 
   assert.equal(grouped.length, 1)
   assert.equal(
     buildHandlingCopyPayload(grouped, INDICATOR_DISPLAY_MODE.REFANGED, INDICATOR_WORKFLOW_MODE.CROWDSTRIKE, 'customerAction'),
-    'a.com\nb.com',
+    'Domains (2):\n\na.com\nb.com',
   )
 })

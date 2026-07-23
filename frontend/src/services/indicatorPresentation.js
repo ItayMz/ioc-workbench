@@ -152,13 +152,18 @@ export function splitIndicatorGroupsByHandling(groups, workflowMode = INDICATOR_
 export function buildHandlingCopyPayload(groups, mode, workflowMode, target) {
   const split = splitIndicatorGroupsByHandling(groups, workflowMode)
   const sourceGroups = target === 'customerAction' ? split.customerAction : split.handledByUs
-  const values = []
+  const groupBlocks = []
 
   for (const group of sourceGroups) {
-    values.push(...getGroupValues(group, mode))
+    const values = getGroupValues(group, mode).filter(Boolean)
+    if (!values.length) {
+      continue
+    }
+
+    groupBlocks.push(`${group.label} (${values.length}):\n\n${values.join('\n')}`)
   }
 
-  return values.filter(Boolean).join('\n')
+  return groupBlocks.join('\n\n')
 }
 
 export function getGroupCopySuccessMessage(groupLabel, count) {

@@ -28,6 +28,14 @@ test('Detected Indicators controls keep expected wrapper classes for split clipb
   assert.equal(componentSource.includes('Copy IOCs for Customer Action'), true)
 })
 
+test('Detected Indicators copy actions use grouped handling formatter and keep per-group copy helper', () => {
+  const componentSource = readFileSync(indicatorResultsPath, 'utf8')
+
+  assert.equal(componentSource.includes("buildHandlingCopyPayload(groupedIndicators, displayMode, workflowMode, 'handledByUs')"), true)
+  assert.equal(componentSource.includes("buildHandlingCopyPayload(groupedIndicators, displayMode, workflowMode, 'customerAction')"), true)
+  assert.equal(componentSource.includes('buildGroupCopyPayload(group, displayMode)'), true)
+})
+
 test('responsive control wrapper styles exist for clean wrapping on mobile', () => {
   const cssSource = readFileSync(appStylesPath, 'utf8')
 

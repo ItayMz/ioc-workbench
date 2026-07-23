@@ -62,7 +62,7 @@ test('Sender Email card is rendered only when dedicated senderEmail query exists
     },
   })
 
-  assert.deepEqual(withSenderCard.map((card) => card.title), ['Sender Email'])
+  assert.deepEqual(withSenderCard.map((card) => card.title), ['Sender Email Query'])
   assert.deepEqual(withSenderCard[0].tables, ['EmailEvents'])
 
   const withoutSenderCard = getVisibleKqlCards({
